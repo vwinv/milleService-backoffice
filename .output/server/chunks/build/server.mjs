@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_=globalThis._importMeta_||{url:"file:///_entry.js",env:process.env};import { ref, defineComponent, inject, h, Suspense, hasInjectionContext, Fragment, getCurrentInstance, provide, shallowReactive, createElementBlock, createApp, onErrorCaptured, onServerPrefetch, unref, createVNode, resolveDynamicComponent, reactive, effectScope, defineAsyncComponent, mergeProps, getCurrentScope, toRef, shallowRef, isReadonly, useSSRContext, isRef, isShallow, isReactive, toRaw } from 'vue';
-import { k as klona, c as createError$1, p as parseURL, l as encodePath, m as decodePath, n as hasProtocol, o as isScriptProtocol, h as joinURL, w as withQuery, q as parse, r as getRequestHeader, e as destr, s as isEqual, t as sanitizeStatusCode, v as setCookie, x as getCookie, y as deleteCookie, z as getContext, $ as $fetch, A as createHooks, B as executeAsync, C as defu } from '../nitro/nitro.mjs';
+import { m as klona, c as createError$1, n as parseURL, o as encodePath, q as decodePath, r as hasProtocol, t as isScriptProtocol, k as joinURL, w as withQuery, v as parse, x as getRequestHeader, h as destr, y as isEqual, z as sanitizeStatusCode, A as setCookie, B as getCookie, C as deleteCookie, D as getContext, $ as $fetch, E as createHooks, F as executeAsync, G as defu } from '../nitro/nitro.mjs';
 import { b as baseURL } from '../routes/renderer.mjs';
 import { RouterView, createMemoryHistory, createRouter, START_LOCATION } from 'vue-router';
 import { ssrRenderSuspense, ssrRenderComponent, ssrRenderVNode, ssrRenderAttrs } from 'vue/server-renderer';
@@ -404,49 +404,78 @@ function getRouteRules(arg) {
     return {};
   }
 }
+const __nuxt_page_meta$1 = {
+  layout: false
+};
 const __nuxt_page_meta = null;
 const _routes = [
   {
     name: __nuxt_page_meta?.name,
     path: "/admin",
-    component: () => import('./admin-BX_rPeK6.mjs'),
+    component: () => import('./admin-BRn9gUai.mjs'),
     children: [
       {
         name: "admin",
         path: "",
-        component: () => import('./index-BA8fCDni.mjs')
+        component: () => import('./index-DIlxOOQe.mjs')
       },
       {
         name: "admin-login",
         path: "login",
-        component: () => import('./login-BrwzMeOJ.mjs')
+        component: () => import('./login-DS4HGulT.mjs')
+      },
+      {
+        name: "admin-offres",
+        path: "offres",
+        component: () => import('./offres-BZ39x15i.mjs')
       },
       {
         name: "admin-clients",
         path: "clients",
-        component: () => import('./clients-BCRzeoYT.mjs')
+        component: () => import('./clients-ykKBvPjy.mjs')
       },
       {
         name: "admin-services",
         path: "services",
-        component: () => import('./services-Co_-xd4v.mjs')
+        component: () => import('./services-oEt7FVOy.mjs')
+      },
+      {
+        name: "admin-wallet",
+        path: "wallet",
+        component: () => import('./index-CQUl0iWu.mjs')
+      },
+      {
+        name: "admin-wallet-demandes",
+        path: "wallet/demandes",
+        component: () => import('./demandes-9FJDrfA3.mjs')
       },
       {
         name: "admin-prestataires-id",
         path: "prestataires/:id()",
-        component: () => import('./_id_-D64hITdv.mjs')
+        component: () => import('./_id_-C0jdA3W_.mjs')
       },
       {
         name: "admin-prestataires",
         path: "prestataires",
-        component: () => import('./index-a27_Oesv.mjs')
+        component: () => import('./index-CxkLdHI1.mjs')
+      },
+      {
+        name: "admin-notifications",
+        path: "notifications",
+        component: () => import('./index-CtNfR8ok.mjs')
+      },
+      {
+        name: "admin-demandes-mille-services",
+        path: "demandes-mille-services",
+        meta: __nuxt_page_meta$1 || {},
+        component: () => import('./demandes-mille-services-BX9B0mIT.mjs')
       }
     ]
   },
   {
     name: "index",
     path: "/",
-    component: () => import('./index-D8B37GIB.mjs')
+    component: () => import('./index-4TsYwL-w.mjs')
   },
   {
     name: "privacy-policy",
@@ -1007,8 +1036,8 @@ const _sfc_main$1 = {
     const statusText = _error.statusMessage ?? (is404 ? "Page Not Found" : "Internal Server Error");
     const description = _error.message || _error.toString();
     const stack = void 0;
-    const _Error404 = defineAsyncComponent(() => import('./error-404-B8lPgm4a.mjs'));
-    const _Error = defineAsyncComponent(() => import('./error-500-DH0xgLR0.mjs'));
+    const _Error404 = defineAsyncComponent(() => import('./error-404-BalkX5S2.mjs'));
+    const _Error = defineAsyncComponent(() => import('./error-500-Bj8vAt0o.mjs'));
     const ErrorTemplate = is404 ? _Error404 : _Error;
     return (_ctx, _push, _parent, _attrs) => {
       _push(ssrRenderComponent(unref(ErrorTemplate), mergeProps({ status: unref(status), statusText: unref(statusText), statusCode: unref(status), statusMessage: unref(statusText), description: unref(description), stack: unref(stack) }, _attrs), null, _parent));
@@ -1089,5 +1118,5 @@ let entry;
 }
 const entry_default = ((ssrContext) => entry(ssrContext));
 
-export { _export_sfc as _, useRouter as a, useCookie as b, __nuxt_component_0 as c, useRuntimeConfig as d, entry_default as default, useNuxtApp as e, asyncDataDefaults as f, createError as g, fetchDefaults as h, useRequestFetch as i, encodeRoutePath as j, nuxtLinkDefaults as k, navigateTo as n, resolveRouteObject as r, useRoute as u };
+export { _export_sfc as _, useRouter as a, useCookie as b, __nuxt_component_0 as c, useRequestEvent as d, entry_default as default, useRuntimeConfig as e, useNuxtApp as f, asyncDataDefaults as g, createError as h, fetchDefaults as i, useRequestFetch as j, encodeRoutePath as k, nuxtLinkDefaults as l, navigateTo as n, resolveRouteObject as r, useRoute as u };
 //# sourceMappingURL=server.mjs.map

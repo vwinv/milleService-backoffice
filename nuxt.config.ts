@@ -22,10 +22,28 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Set via NUXT_OPENAI_API_KEY or OPENAI_API_KEY in env
     openaiApiKey: '',
+    /**
+     * URL réelle du backend Nest (côté serveur Nuxt uniquement).
+     * Défaut : localhost pour le dev ; en prod sur le même hébergeur que le backoffice :
+     *   NUXT_API_BACKEND=https://votre-api.onrender.com
+     */
+    apiBackend:
+      process.env.NUXT_API_BACKEND ||
+      process.env.NUXT_PUBLIC_API_BASE ||
+      process.env.NUXT_PUBLIC_API_URL ||
+      //'http://127.0.0.1:3001',
+      'https://milleservice-backend.onrender.com',
     public: {
       siteUrl: 'https://mille-services.com',
-      /** API Nest (avis public, auth, etc.) — ex. http://[::1]:3001 */
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://[::1]:3001',
+      /**
+       * Si défini : appels directs du navigateur vers cette URL (CORS doit autoriser le backoffice).
+       * Si vide (défaut) : appels vers /__nest/... proxyfiables par Nitro → plus besoin
+       * d’exposer une URL d’API dans le bundle ; définir NUXT_API_BACKEND sur l’hôte du backoffice.
+       */
+      apiBase:
+        process.env.NUXT_PUBLIC_API_BASE ||
+        process.env.NUXT_PUBLIC_API_URL ||
+        'https://milleservice-backend.onrender.com',
     }
   },
 

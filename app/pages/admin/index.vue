@@ -144,7 +144,7 @@ type AdminTransaction = {
   montant: number | null
   wallet: string
   statut: string
-  category: 'PAIEMENT_PRESTATION' | 'RETRAIT_PRESTATAIRE'
+  category: 'PAIEMENT_PRESTATION' | 'PAIEMENT_ABONNEMENT' | 'RETRAIT_PRESTATAIRE'
 }
 
 const stats = reactive<AdminStats>({

@@ -64,6 +64,14 @@
             </svg>
           </span>
         </label>
+        <button
+          type="button"
+          class="rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100 disabled:opacity-40"
+          :disabled="notifSubmitting"
+          @click="openGeneralNotificationModal"
+        >
+          Créer une notification générale
+        </button>
         <div class="flex flex-wrap items-center justify-end gap-2">
           <span class="text-sm text-slate-600">
             <template v-if="listTotal > 0">
@@ -108,15 +116,16 @@
               <th class="px-3 py-3 font-medium sm:px-4">Date d'adhésion</th>
               <th class="px-3 py-3 font-medium sm:px-4">Nom</th>
               <th class="px-3 py-3 font-medium sm:px-4">E-mail</th>
+              <th class="px-3 py-3 font-medium sm:px-4">Statut</th>
               <th class="px-3 py-3 font-medium sm:px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 text-slate-700">
             <tr v-if="loading">
-              <td colspan="5" class="px-4 py-8 text-center text-slate-500">Chargement…</td>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-500">Chargement…</td>
             </tr>
             <tr v-else-if="!clients.length">
-              <td colspan="5" class="px-4 py-8 text-center text-slate-400">Aucun client pour cette recherche.</td>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-400">Aucun client pour cette recherche.</td>
             </tr>
             <tr v-for="c in clients" :key="c.id">
               <td class="px-3 py-3 sm:px-4">
@@ -134,6 +143,14 @@
               <td class="px-3 py-3 sm:px-4 whitespace-nowrap">{{ formatDate(c.dateAdhesion) }}</td>
               <td class="px-3 py-3 sm:px-4 font-medium text-slate-900">{{ c.nomComplet }}</td>
               <td class="px-3 py-3 sm:px-4">{{ c.email }}</td>
+              <td class="px-3 py-3 sm:px-4">
+                <span
+                  class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="c.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                >
+                  {{ clientStatutLabel(c) }}
+                </span>
+              </td>
               <td class="px-3 py-3 sm:px-4 text-right">
                 <div class="flex items-center justify-end gap-1">
                   <button
@@ -143,6 +160,18 @@
                     @click="openDetail(c.id)"
                   >
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-lg p-2 text-blue-700 hover:bg-blue-50 disabled:opacity-45"
+                    title="Notifier ce client"
+                    :disabled="notifSendingUserId === c.userId || notifSubmitting"
+                    @click="openTargetedNotificationModal(c)"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14 1l-1 2h-3L9 1H7l1 2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2l1-2h-2z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 22a3 3 0 0 0 6 0" />
+                    </svg>
                   </button>
                   <button
                     type="button"
@@ -163,7 +192,7 @@
 
     <div
       v-if="detailOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-3 py-6 backdrop-blur-[2px] sm:px-4"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-[#140C44]/50 px-3 py-6 backdrop-blur-md sm:px-4"
       @click.self="closeDetail"
     >
       <div
@@ -210,12 +239,16 @@
                 </a>
                 <a
                   v-if="phoneDigits(detailClient.telephone)"
-                  :href="smsHref(detailClient.telephone)"
-                  class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md transition hover:bg-emerald-600"
-                  title="Envoyer un SMS"
+                  :href="whatsappHref(detailClient.telephone)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-md transition hover:bg-[#20bd5a]"
+                  title="WhatsApp"
                 >
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
+                    />
                   </svg>
                 </a>
               </div>
@@ -319,7 +352,9 @@
                 </div>
 
                 <!-- Statut + interrupteur -->
-                <div class="flex flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 lg:w-44 lg:flex-col lg:items-end lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                <div
+                  class="flex flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 lg:w-44 lg:flex-col lg:items-end lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"
+                >
                   <div class="text-right">
                     <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Statut</p>
                     <p
@@ -352,10 +387,140 @@
       </div>
     </div>
   </div>
+
+  <Teleport to="body">
+    <div
+      v-if="notificationModalOpen"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-[#140C44]/50 p-3 backdrop-blur-md sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="notification-modal-title"
+      @click.self="closeNotificationModal"
+    >
+      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <h3
+            id="notification-modal-title"
+            class="text-lg font-semibold text-slate-800"
+          >
+            {{
+              notificationTargetMode === 'general'
+                ? 'Notification générale'
+                : 'Notification ciblée'
+            }}
+          </h3>
+          <button
+            type="button"
+            class="rounded-full p-1 text-rose-500 transition hover:bg-rose-50"
+            aria-label="Fermer"
+            @click="closeNotificationModal"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="text-sm font-medium text-slate-700">Titre</label>
+            <input
+              v-model="notificationTitle"
+              type="text"
+              placeholder="Ex: Nouvelle notification"
+              class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+            />
+          </div>
+
+          <div v-if="notificationTargetMode === 'general'">
+            <label class="text-sm font-medium text-slate-700">Audience</label>
+            <select
+              v-model="notificationGeneralAudience"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+            >
+              <option value="TOUT">Tout le monde</option>
+              <option value="PARTICULIER">Tous les particuliers</option>
+              <option value="PRESTATAIRE">Tous les prestataires</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-slate-700">Message</label>
+            <textarea
+              v-model="notificationBody"
+              rows="4"
+              placeholder="Votre message…"
+              class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+            />
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-slate-700">Type (optionnel)</label>
+            <input
+              v-model="notificationType"
+              type="text"
+              placeholder="Ex: general_message"
+              class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+            />
+          </div>
+
+          <div
+            v-if="
+              notificationTargetMode === 'targeted' &&
+              notificationTargetLabel
+            "
+            class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700"
+          >
+            Cible : {{ notificationTargetLabel }}
+          </div>
+
+          <div
+            v-if="notificationError"
+            class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+          >
+            {{ notificationError }}
+          </div>
+
+          <div class="mt-6 flex justify-center">
+            <button
+              type="button"
+              class="w-full max-w-xs rounded-full bg-[#020B51] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#020B51]/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              :disabled="notificationSubmitting"
+              @click="submitNotification"
+            >
+              {{ notificationSubmitting ? 'Envoi…' : 'Envoyer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 const { fetchAdminApi } = useAdminFetch()
+
+const notificationModalOpen = ref(false)
+const notificationTargetMode = ref<'general' | 'targeted'>('general')
+const notificationGeneralAudience = ref<'TOUT' | 'PARTICULIER' | 'PRESTATAIRE'>('TOUT')
+const notificationTargetUserId = ref<string | null>(null)
+const notificationTargetLabel = ref('')
+
+const notificationTitle = ref('')
+const notificationBody = ref('')
+const notificationType = ref('')
+const notificationError = ref('')
+const notificationSubmitting = ref(false)
+
+// Alias utilisés dans le template (compatibilité avec les boutons)
+const notifSubmitting = notificationSubmitting
+const notifSendingUserId = ref<string | null>(null)
 
 type ClientRow = {
   id: string
@@ -372,17 +537,17 @@ type ClientRow = {
   statut: string
 }
 
-function clientStatutLabel(c: Pick<ClientRow, 'actif' | 'statut'>) {
-  const s = c.statut?.trim()
-  if (s) return s
-  return c.actif ? 'Actif' : 'Inactif'
-}
-
 type ClientDetail = ClientRow & {
   compteCreeLe: string
   misAJourLe: string
   prestationsTotal: number
   prestationsAnnulees: number
+}
+
+function clientStatutLabel(c: Pick<ClientRow, 'actif' | 'statut'>) {
+  const s = c.statut?.trim()
+  if (s) return s
+  return c.actif ? 'Actif' : 'Inactif'
 }
 
 const stats = reactive({
@@ -471,7 +636,7 @@ async function loadClients() {
     listTotal.value = payload?.total ?? 0
     avatarLoadFailed.value = new Set()
     clients.value = (payload?.items ?? []).map((row) => {
-      const actif = Boolean(row.actif ?? row.emailVerified)
+      const actif = Boolean(row.actif)
       const statut = row.statut?.trim() ? row.statut.trim() : actif ? 'Actif' : 'Inactif'
       return {
         ...row,
@@ -518,9 +683,10 @@ function telHref(phone: string) {
   return d ? `tel:${d}` : '#'
 }
 
-function smsHref(phone: string) {
+/** Numéro international sans + (ex. 221771234567). Le stockage doit inclure l’indicatif pays. */
+function whatsappHref(phone: string) {
   const d = phoneDigits(phone)
-  return d ? `sms:${d}` : '#'
+  return d ? `https://wa.me/${d}` : '#'
 }
 
 async function openDetail(id: string) {
@@ -532,8 +698,13 @@ async function openDetail(id: string) {
     const response = await fetchAdminApi<{ data?: ClientDetail } & ClientDetail>(`/admin/clients/${id}`)
     const dr = response as { data?: ClientDetail }
     const raw = dr?.data ?? (response as ClientDetail)
+    const actif = Boolean(raw.actif)
+    const statut =
+      raw.statut?.trim() ? raw.statut.trim() : actif ? 'Actif' : 'Inactif'
     detailClient.value = {
       ...raw,
+      actif,
+      statut,
       prestationsTotal: raw.prestationsTotal ?? 0,
       prestationsAnnulees: raw.prestationsAnnulees ?? 0,
     }
@@ -551,12 +722,107 @@ function closeDetail() {
   detailModalAvatarFailed.value = false
 }
 
+function openGeneralNotificationModal() {
+  notificationTargetMode.value = 'general'
+  notificationTargetUserId.value = null
+  notificationTargetLabel.value = ''
+  notificationGeneralAudience.value = 'TOUT'
+  notificationTitle.value = ''
+  notificationBody.value = ''
+  notificationType.value = ''
+  notificationError.value = ''
+  notifSendingUserId.value = null
+  notificationModalOpen.value = true
+}
+
+function openTargetedNotificationModal(c: ClientRow) {
+  notificationTargetMode.value = 'targeted'
+  notificationTargetUserId.value = c.userId
+  notificationTargetLabel.value = c.nomComplet
+  notificationTitle.value = ''
+  notificationBody.value = ''
+  notificationType.value = ''
+  notificationError.value = ''
+  notificationModalOpen.value = true
+}
+
+function closeNotificationModal() {
+  if (notificationSubmitting.value) return
+  notificationModalOpen.value = false
+}
+
+async function submitNotification() {
+  if (notificationSubmitting.value) return
+  notificationError.value = ''
+
+  const title = notificationTitle.value.trim()
+  const body = notificationBody.value.trim()
+  const type = notificationType.value.trim()
+
+  if (!title) {
+    notificationError.value = 'Veuillez saisir un titre.'
+    return
+  }
+
+  if (notificationTargetMode.value === 'targeted' && !notificationTargetUserId.value) {
+    notificationError.value = 'Client ciblé introuvable.'
+    return
+  }
+
+  notificationSubmitting.value = true
+  if (notificationTargetMode.value === 'targeted') {
+    notifSendingUserId.value = notificationTargetUserId.value
+  }
+  try {
+    if (notificationTargetMode.value === 'general') {
+      await fetchAdminApi(
+        '/admin/notifications/general',
+          {
+            body: {
+              title,
+              body: body || undefined,
+              type: type || undefined,
+              audience: notificationGeneralAudience.value,
+            },
+          },
+        'POST',
+      )
+    } else {
+      await fetchAdminApi(
+        '/admin/notifications/targeted',
+        {
+          body: {
+            userId: notificationTargetUserId.value,
+            title,
+            body: body || undefined,
+            type: type || undefined,
+          },
+        },
+        'POST',
+      )
+    }
+
+    notificationModalOpen.value = false
+    window.alert('Notification envoyée.')
+  } catch (e) {
+    console.error(e)
+    notificationError.value = extractApiMessage(e, 'Impossible d\'envoyer la notification.')
+  } finally {
+    notificationSubmitting.value = false
+    notifSendingUserId.value = null
+  }
+}
+
 async function toggleClientStatut() {
   if (!detailClient.value || toggleStatutLoading.value) return
   const next = !detailClient.value.actif
   toggleStatutLoading.value = true
   try {
-    await fetchAdminApi(`/admin/clients/${detailClient.value.id}/statut`, { body: { actif: next } }, 'PATCH')
+    await fetchAdminApi(
+      `/admin/clients/${detailClient.value.id}/statut`,
+      { body: { actif: next } },
+      'PATCH',
+    )
     detailClient.value.actif = next
     detailClient.value.statut = next ? 'Actif' : 'Inactif'
     await loadClients()
@@ -600,6 +866,15 @@ function formatDate(value: string) {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleDateString('fr-FR')
+}
+
+function extractApiMessage(err: unknown, fallback: string): string {
+  const e = err as { data?: { message?: string | string[] }; message?: string }
+  const m = e?.data?.message
+  if (typeof m === 'string' && m.trim()) return m
+  if (Array.isArray(m) && m[0]) return String(m[0])
+  if (e?.message && typeof e.message === 'string') return e.message
+  return fallback
 }
 
 useHead({

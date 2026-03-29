@@ -362,7 +362,7 @@
     <!-- Refus document -->
     <div
       v-if="rejectDocumentModalOpen"
-      class="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/50 px-4 py-6"
+      class="fixed inset-0 z-[75] flex items-center justify-center bg-[#140C44]/50 px-4 py-6 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       @click.self="closeRejectDocumentModal"
@@ -400,7 +400,7 @@
     <Teleport to="body">
       <div
         v-if="isDocumentPreviewOpen"
-        class="fixed inset-0 z-[10050] flex items-center justify-center bg-slate-900/60 px-2 py-6 sm:px-4"
+        class="fixed inset-0 z-[10050] flex items-center justify-center bg-[#140C44]/50 px-2 py-6 backdrop-blur-md sm:px-4"
         @click.self="closeDocumentPreview"
       >
         <div class="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
@@ -426,11 +426,11 @@
                 :alt="documentPreviewTitle"
                 class="mx-auto block max-h-[85vh] w-auto object-contain"
               />
-              <embed
+              <iframe
                 v-else-if="documentPreviewKind === 'pdf'"
                 :src="documentPreviewSrc"
-                type="application/pdf"
-                class="min-h-[min(85vh,800px)] h-[min(85vh,800px)] w-full bg-white"
+                class="min-h-[min(85vh,800px)] h-[min(85vh,800px)] w-full border-0 bg-white"
+                title="Aperçu PDF"
               />
               <iframe
                 v-else
@@ -457,7 +457,7 @@
     <Teleport to="body">
       <div
         v-if="plafondModalOpen"
-        class="fixed inset-0 z-[10040] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-[2px]"
+        class="fixed inset-0 z-[10040] flex items-center justify-center bg-[#140C44]/50 px-4 py-8 backdrop-blur-md"
         role="dialog"
         aria-modal="true"
         aria-labelledby="plafond-modal-title"
@@ -926,7 +926,11 @@ const documentPreviewSrc = computed(() => {
   const base = documentPreviewUrl.value
   if (!base) return ''
   const isBlob = base.startsWith('blob:')
-  const hash = documentPreviewKind.value === 'pdf' && !isBlob ? '#toolbar=0' : ''
+  // Pas de hash sur l’URL du proxy (/api/document-preview?url=...) : casse la requête.
+  const hash =
+    documentPreviewKind.value === 'pdf' && !isBlob && !base.includes('/api/document-preview')
+      ? '#toolbar=0'
+      : ''
   return `${base}${hash}`
 })
 
@@ -951,10 +955,24 @@ async function openDocumentPreview(doc: PrestataireDocument) {
   const kind = inferDocumentKind(rawUrl, doc.nomFichier)
   const deliveryUrl = kind === 'image' ? rawUrl : toInlineDeliveryUrl(rawUrl, kind)
   documentPreviewKind.value = kind
-  documentPreviewOpenTabUrl.value = deliveryUrl
+  documentPreviewOpenTabUrl.value = rawUrl
   try {
     if (kind === 'image') {
       documentPreviewUrl.value = rawUrl
+    } else if (kind === 'pdf' && import.meta.client) {
+      // Proxy même origine, puis Blob typé application/pdf : le lecteur PDF intégré
+      // à Chrome rejette souvent une iframe directe sur /api ou un blob sans MIME.
+      const proxyUrl = `/api/document-preview?url=${encodeURIComponent(rawUrl)}`
+      const res = await fetch(proxyUrl, { credentials: 'same-origin' })
+      if (!res.ok) {
+        throw new Error(`Proxy document ${res.status}`)
+      }
+      const ab = await res.arrayBuffer()
+      if (ab.byteLength === 0) throw new Error('Fichier vide')
+      const blob = new Blob([ab], { type: 'application/pdf' })
+      const objectUrl = URL.createObjectURL(blob)
+      documentPreviewObjectUrl.value = objectUrl
+      documentPreviewUrl.value = objectUrl
     } else if (import.meta.client) {
       const res = await fetch(deliveryUrl, { mode: 'cors', credentials: 'omit' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -966,8 +984,14 @@ async function openDocumentPreview(doc: PrestataireDocument) {
       documentPreviewUrl.value = deliveryUrl
     }
   } catch (e) {
-    console.warn('Aperçu via blob indisponible:', e)
-    documentPreviewUrl.value = deliveryUrl
+    console.warn('Aperçu document indisponible:', e)
+    documentPreviewUrl.value = ''
+    if (documentPreviewKind.value === 'pdf') {
+      documentPreviewError.value =
+        'Impossible de charger l’aperçu du PDF. Utilisez « Ouvrir dans un nouvel onglet » ci-dessous (le fichier est valide si le téléchargement fonctionne).'
+    } else {
+      documentPreviewUrl.value = deliveryUrl
+    }
   } finally {
     documentPreviewLoading.value = false
   }

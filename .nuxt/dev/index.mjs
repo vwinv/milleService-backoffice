@@ -1,10 +1,11 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getResponseStatusText } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, setHeader, getResponseStatusText } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import { escapeHtml } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/@vue/shared/dist/shared.cjs.js';
+import { Buffer as Buffer$1 } from 'node:buffer';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/ufo/dist/index.mjs';
 import destr, { destr as destr$1 } from 'file:///Users/mac/Desktop/milleServices/milleService-backoffice/node_modules/destr/dist/index.mjs';
@@ -648,9 +649,10 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "siteUrl": "https://mille-services.com",
-    "apiBase": "http://[::1]:3001"
+    "apiBase": ""
   },
-  "openaiApiKey": ""
+  "openaiApiKey": "",
+  "apiBackend": "http://127.0.0.1:3001"
 };
 const envOptions = {
   prefix: "NITRO_",
@@ -2589,10 +2591,14 @@ async function getIslandContext(event) {
 	return ctx;
 }
 
+const _lazy_oPi0LP = () => Promise.resolve().then(function () { return documentPreview_get$1; });
+const _lazy_93RCLc = () => Promise.resolve().then(function () { return _____$1; });
 const _lazy_WzvC6G = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
   { route: '', handler: _QWZgsj, lazy: false, middleware: true, method: undefined },
+  { route: '/api/document-preview', handler: _lazy_oPi0LP, lazy: true, middleware: false, method: "get" },
+  { route: '/__nest/**', handler: _lazy_93RCLc, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_error', handler: _lazy_WzvC6G, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_WzvC6G, lazy: true, middleware: false, method: undefined }
@@ -2933,6 +2939,106 @@ const styles = {};
 const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: styles
+}, Symbol.toStringTag, { value: 'Module' }));
+
+function bufferLooksLikePdf(buf) {
+  if (buf.byteLength < 4) return false;
+  const u8 = new Uint8Array(buf.slice(0, 5));
+  const head4 = String.fromCharCode(
+    u8[0],
+    u8[1],
+    u8[2],
+    u8[3]
+  );
+  return head4 === "%PDF";
+}
+function normalizeContentTypeForPreview(pathname, upstreamContentType, buffer) {
+  const path = pathname.split("?")[0].toLowerCase();
+  const ct = (upstreamContentType).split(";")[0].trim().toLowerCase();
+  if (path.endsWith(".pdf") || /\.pdf($|[?#/])/i.test(path)) {
+    return "application/pdf";
+  }
+  if (ct.includes("pdf")) {
+    return upstreamContentType.split(";")[0].trim();
+  }
+  if ((ct === "application/octet-stream" || ct === "") && bufferLooksLikePdf(buffer)) {
+    return "application/pdf";
+  }
+  if (ct.startsWith("image/") || ct === "application/pdf" || ct === "application/x-pdf") {
+    return upstreamContentType.split(";")[0].trim();
+  }
+  if (path.match(/\.(jpe?g|png|gif|webp|bmp)$/)) {
+    return ct || "application/octet-stream";
+  }
+  return upstreamContentType.split(";")[0].trim() || "application/octet-stream";
+}
+const documentPreview_get = defineEventHandler(async (event) => {
+  var _a, _b;
+  const query = getQuery$1(event);
+  const raw = typeof query.url === "string" ? query.url.trim() : "";
+  if (!raw) {
+    throw createError({ statusCode: 400, statusMessage: "Param\xE8tre url requis" });
+  }
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: "URL invalide" });
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== "res.cloudinary.com" && !host.endsWith(".res.cloudinary.com")) {
+    throw createError({ statusCode: 403, statusMessage: "H\xF4te non autoris\xE9" });
+  }
+  if (parsed.protocol !== "https:") {
+    throw createError({ statusCode: 403, statusMessage: "HTTPS requis" });
+  }
+  const upstream = await fetch(raw, {
+    headers: { Accept: "*/*" }
+  });
+  if (!upstream.ok) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `\xC9chec r\xE9cup\xE9ration document (${upstream.status})`
+    });
+  }
+  const buffer = await upstream.arrayBuffer();
+  const upstreamCt = ((_b = (_a = upstream.headers.get("content-type")) == null ? void 0 : _a.split(";")[0]) == null ? void 0 : _b.trim()) || "application/octet-stream";
+  const contentType = normalizeContentTypeForPreview(
+    parsed.pathname,
+    upstreamCt,
+    buffer
+  );
+  const body = Buffer$1.from(buffer);
+  setHeader(event, "Content-Type", contentType);
+  setHeader(event, "Content-Length", String(body.length));
+  setHeader(event, "Content-Disposition", "inline");
+  setHeader(event, "Cache-Control", "private, max-age=120");
+  setHeader(event, "X-Content-Type-Options", "nosniff");
+  setHeader(event, "Content-Encoding", "identity");
+  return body;
+});
+
+const documentPreview_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: documentPreview_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const _____ = defineEventHandler((event) => {
+  const config = useRuntimeConfig(event);
+  const backend = String(config.apiBackend || "http://127.0.0.1:3001").replace(
+    /\/$/,
+    ""
+  );
+  const u = getRequestURL(event);
+  let path = u.pathname.replace(/^\/__nest/, "");
+  if (!path || path === "") path = "/";
+  const target = `${backend}${path}${u.search}`;
+  return proxyRequest(event, target);
+});
+
+const _____$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _____
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

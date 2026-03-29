@@ -29,6 +29,31 @@ export function clearAdminSession() {
   localStorage.removeItem('admin_display_name')
 }
 
+function resolveAdminApiBases(config: ReturnType<typeof useRuntimeConfig>): string[] {
+  const configured = String(config.public.apiBase ?? '').trim()
+  if (configured) {
+    if (configured.startsWith('https://')) {
+      return [configured]
+    }
+    return [
+      configured,
+      'http://127.0.0.1:3001',
+      'http://localhost:3001',
+      'http://[::1]:3001',
+    ]
+  }
+  /** Mode proxy : le navigateur appelle uniquement l’origine du backoffice + /__nest */
+  if (import.meta.client) {
+    return [`${window.location.origin}/__nest`]
+  }
+  try {
+    const u = useRequestURL()
+    return [`${u.origin}/__nest`]
+  } catch {
+    return ['http://127.0.0.1:3000/__nest']
+  }
+}
+
 export function useAdminFetch() {
   const config = useRuntimeConfig()
   const token = useCookie<string | null>('admin_access_token', {
@@ -36,15 +61,7 @@ export function useAdminFetch() {
     sameSite: 'lax',
   })
 
-  const apiBases = computed(() => {
-    const configured = (config.public.apiBase as string) || 'http://[::1]:3001'
-    return [
-      configured,
-      'http://[::1]:3001',
-      'http://localhost:3001',
-      'http://127.0.0.1:3001',
-    ]
-  })
+  const apiBases = computed(() => resolveAdminApiBases(config))
 
   async function fetchAdminApi<T>(
     url: string,
@@ -55,8 +72,13 @@ export function useAdminFetch() {
     const authToken =
       token.value || (import.meta.client ? localStorage.getItem('admin_access_token') : null)
 
-    for (const base of apiBases.value) {
+    const bases = resolveAdminApiBases(config)
+    for (const base of bases) {
       try {
+        if (import.meta.dev) {
+          // eslint-disable-next-line no-console
+          console.debug('[admin API]', method, base + url)
+        }
         return await $fetch<T>(url, {
           method,
           baseURL: base,
@@ -66,6 +88,10 @@ export function useAdminFetch() {
         })
       } catch (error) {
         lastError = error
+        if (import.meta.dev) {
+          // eslint-disable-next-line no-console
+          console.warn('[admin API] échec sur', base, error)
+        }
         if (isUnauthorized(error) && shouldRedirectOn401()) {
           clearAdminSession()
           await navigateTo('/admin/login')
@@ -73,7 +99,9 @@ export function useAdminFetch() {
         }
       }
     }
-    throw lastError ?? new Error('API admin indisponible')
+    const hint =
+      'En prod : définir NUXT_API_BACKEND (URL Nest) sur l’hébergeur du backoffice, ou NUXT_PUBLIC_API_BASE pour appels directs. Sans proxy ni URL publique, le navigateur n’atteint pas l’API.'
+    throw lastError ?? new Error(`API admin indisponible. ${hint}`)
   }
 
   return { fetchAdminApi, apiBases }

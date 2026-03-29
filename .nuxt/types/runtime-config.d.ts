@@ -12,6 +12,8 @@ import { RuntimeConfig as UserRuntimeConfig, PublicRuntimeConfig as UserPublicRu
 
    openaiApiKey: string,
 
+   apiBackend: string,
+
    nitro: {
       envPrefix: string,
    },
