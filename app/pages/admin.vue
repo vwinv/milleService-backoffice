@@ -265,7 +265,11 @@ const isWalletHome = computed(
   () => route.path === '/admin/wallet' || route.path === '/admin/wallet/',
 )
 const isWalletDemandes = computed(() => route.path.startsWith('/admin/wallet/demandes'))
-const isAdminLogin = computed(() => route.path === '/admin/login')
+/** Connexion plein écran : normaliser le path (slash final, query hash ignorés pour le path). */
+const isAdminLogin = computed(() => {
+  const path = (route.path || '/').replace(/\/+$/, '') || '/'
+  return path === '/admin/login'
+})
 const adminDisplayNameCookie = useCookie<string | null>('admin_display_name')
 const dashboardExportRef = ref<HTMLElement | null>(null)
 const isExportingPdf = ref(false)
@@ -302,7 +306,7 @@ onMounted(() => {
 
 function logoutAdmin() {
   clearAdminSession()
-  router.push('/admin/login')
+  router.replace('/admin/login')
 }
 
 async function exportDashboardPdf() {

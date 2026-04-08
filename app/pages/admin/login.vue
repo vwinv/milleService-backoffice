@@ -142,13 +142,15 @@
           </a>
         </div>
 
-        <button
-          type="submit"
-          :disabled="isSubmitting"
-          class="mx-auto mt-10 inline-flex h-12 w-full max-w-[220px] items-center justify-center rounded-full bg-[#020B51] px-6 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(2,11,81,0.22)] transition hover:bg-[#07146a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#020B51] focus-visible:ring-offset-2"
-        >
-          {{ isSubmitting ? 'Connexion...' : 'Connexion' }}
-        </button>
+        <div class="mt-10 flex w-full justify-center">
+          <button
+            type="submit"
+            :disabled="isSubmitting"
+            class="inline-flex h-12 w-full max-w-[220px] shrink-0 items-center justify-center rounded-full bg-[#020B51] px-6 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(2,11,81,0.22)] transition hover:bg-[#07146a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#020B51] focus-visible:ring-offset-2 disabled:opacity-70"
+          >
+            {{ isSubmitting ? 'Connexion...' : 'Connexion' }}
+          </button>
+        </div>
         <p
           v-if="errorMessage"
           class="mt-4 text-center text-sm font-medium text-red-500"
@@ -176,6 +178,18 @@ type LoginApiResponse = {
   user?: { role?: string; email?: string }
 }
 
+function messageFromApiError(err: unknown): string | null {
+  if (!err || typeof err !== 'object') return null
+  const e = err as {
+    data?: { message?: string | string[] }
+    message?: string
+  }
+  const raw = e.data?.message ?? e.message
+  if (typeof raw === 'string' && raw.trim()) return raw.trim()
+  if (Array.isArray(raw) && raw.length) return raw.filter(Boolean).join(', ')
+  return null
+}
+
 async function tryAdminLogin(baseURL: string): Promise<LoginApiResponse> {
   return $fetch<LoginApiResponse>('/auth/login', {
     method: 'POST',
@@ -194,14 +208,19 @@ async function submitLogin() {
   isSubmitting.value = true
 
   try {
-    const configuredBase =
-      (config.public.apiBase as string) || 'http://localhost:3000'
-    const candidateBases = [
-      configuredBase,
-      'http://[::1]:3001',
-      'http://localhost:3001',
+    const configuredBase = String(config.public.apiBase ?? '').trim()
+    const localBases = [
       'http://127.0.0.1:3001',
+      'http://localhost:3001',
+      'http://[::1]:3001',
     ]
+    /** En dev : essayer l’API locale d’abord (même DB que ton .env) ; en prod : l’URL configurée en premier. */
+    const candidateBases = import.meta.dev
+      ? [...localBases, ...(configuredBase ? [configuredBase] : [])]
+      : [
+          ...(configuredBase ? [configuredBase] : []),
+          ...localBases,
+        ]
     let response: LoginApiResponse | null = null
     let lastError: unknown = null
 
@@ -257,7 +276,9 @@ async function submitLogin() {
 
     await router.push('/admin')
   } catch (err: unknown) {
+    const fromApi = messageFromApiError(err)
     errorMessage.value =
+      fromApi ??
       'Connexion impossible. Vérifiez les identifiants et que l’API backend est démarrée.'
     console.error(err)
   } finally {

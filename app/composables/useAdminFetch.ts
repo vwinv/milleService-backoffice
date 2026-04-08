@@ -94,7 +94,8 @@ export function useAdminFetch() {
         }
         if (isUnauthorized(error) && shouldRedirectOn401()) {
           clearAdminSession()
-          await navigateTo('/admin/login')
+          /** Rechargement complet : évite tout résidu de l’UI admin (barre latérale / layout). */
+          window.location.assign('/admin/login')
           throw error
         }
       }

@@ -10,10 +10,10 @@ export default defineNuxtRouteMiddleware((to) => {
     Boolean(accessToken.value) && adminRole.value === 'ADMIN'
 
   if (!isAuthenticated && !isLoginPage) {
-    return navigateTo('/admin/login')
+    return navigateTo('/admin/login', { replace: true })
   }
 
   if (isAuthenticated && isLoginPage) {
-    return navigateTo('/admin')
+    return navigateTo('/admin', { replace: true })
   }
 })

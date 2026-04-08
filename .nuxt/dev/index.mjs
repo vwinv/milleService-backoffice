@@ -649,7 +649,7 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "siteUrl": "https://mille-services.com",
-    "apiBase": ""
+    "apiBase": "http://127.0.0.1:3001"
   },
   "openaiApiKey": "",
   "apiBackend": "http://127.0.0.1:3001"
@@ -2038,7 +2038,7 @@ const _zac2P0SXN2q_QE62bRRdFFRt3nFydzKgaOVETZ4DtCk = (function(nitro) {
 
 const rootDir = "/Users/mac/Desktop/milleServices/milleService-backoffice";
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"description","content":"Plateforme de mise en relation particulier et prestataires"}],"link":[],"style":[],"script":[],"noscript":[],"title":"Milles Services"};
+const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"description","content":"Plateforme de mise en relation particulier et prestataires"}],"link":[{"rel":"icon","type":"image/png","href":"/images/logo.png"},{"rel":"apple-touch-icon","href":"/images/logo.png"}],"style":[],"script":[],"noscript":[],"title":"Milles Services"};
 
 const appRootTag = "div";
 

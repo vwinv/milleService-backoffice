@@ -11,6 +11,10 @@ export default defineNuxtConfig({
       title: 'Milles Services',
       meta: [
         { name: 'description', content: 'Plateforme de mise en relation particulier et prestataires' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/images/logo.png' },
+        { rel: 'apple-touch-icon', href: '/images/logo.png' }
       ]
     }
   },
@@ -31,19 +35,18 @@ export default defineNuxtConfig({
       process.env.NUXT_API_BACKEND ||
       process.env.NUXT_PUBLIC_API_BASE ||
       process.env.NUXT_PUBLIC_API_URL ||
-      //'http://127.0.0.1:3001',
-      'https://milleservice-backend.onrender.com',
+      'http://127.0.0.1:3001',
+    //'https://milleservice-backend.onrender.com',
     public: {
+      /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
       /**
        * Si défini : appels directs du navigateur vers cette URL (CORS doit autoriser le backoffice).
        * Si vide (défaut) : appels vers /__nest/... proxyfiables par Nitro → plus besoin
        * d’exposer une URL d’API dans le bundle ; définir NUXT_API_BACKEND sur l’hôte du backoffice.
        */
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ||
-        process.env.NUXT_PUBLIC_API_URL ||
-        'https://milleservice-backend.onrender.com',
+      apiBase: 'http://127.0.0.1:3001',
+      // apiBase: 'https://milleservice-backend.onrender.com',
     }
   },
 
