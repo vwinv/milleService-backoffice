@@ -35,8 +35,8 @@ export default defineNuxtConfig({
       process.env.NUXT_API_BACKEND ||
       process.env.NUXT_PUBLIC_API_BASE ||
       process.env.NUXT_PUBLIC_API_URL ||
-      'http://127.0.0.1:3001',
-    //'https://milleservice-backend.onrender.com',
+      //  'http://127.0.0.1:3001',
+      'https://milleservice-backend.onrender.com',
     public: {
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
@@ -45,7 +45,7 @@ export default defineNuxtConfig({
        * Si vide (défaut) : appels vers /__nest/... proxyfiables par Nitro → plus besoin
        * d’exposer une URL d’API dans le bundle ; définir NUXT_API_BACKEND sur l’hôte du backoffice.
        */
-      apiBase: 'http://127.0.0.1:3001',
+      apiBase: 'https://milleservice-backend.onrender.com',
       // apiBase: 'https://milleservice-backend.onrender.com',
     }
   },
