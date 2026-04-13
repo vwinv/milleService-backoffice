@@ -331,9 +331,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     </span>
-                    <div>
+                    <div class="min-w-0">
                       <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Adresse</p>
-                      <p class="font-medium text-slate-900">{{ detailClient.adresse?.trim() || '—' }}</p>
+                      <p class="whitespace-pre-wrap break-words font-medium text-slate-900">
+                        {{ detailClient.adresse?.trim() || '—' }}
+                      </p>
                     </div>
                   </div>
                   <div class="flex items-start gap-3">

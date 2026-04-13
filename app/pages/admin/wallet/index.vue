@@ -245,34 +245,42 @@
               </div>
             </div>
 
-            <div>
-              <p class="text-sm font-medium text-slate-700">Carte Bancaire</p>
+            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
               <input
-                v-model="cardNumber"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                placeholder="Numéro de la carte"
-                class="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
+                v-model="payWithPaydunya"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#020B51] focus:ring-[#020B51]"
+                :disabled="selectedPayout === 'RIB'"
               />
-              <div class="mt-2 grid grid-cols-2 gap-2">
-                <input
-                  v-model="cardExpiry"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="Date d'expiration"
-                  class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
-                />
-                <input
-                  v-model="cardCvv"
-                  type="text"
-                  inputmode="numeric"
-                  autocomplete="off"
-                  placeholder="CVV"
-                  class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
-                />
-              </div>
+              <span class="text-sm leading-snug text-slate-700">
+                <span class="font-semibold text-slate-900">Envoyer via PayDunya</span>
+                (débit du compte marchand PayDunya). Incompatible avec « Carte bancaire ».
+              </span>
+            </label>
+
+            <div v-if="payWithPaydunya">
+              <label class="text-sm font-medium text-slate-700">Téléphone bénéficiaire</label>
+              <input
+                v-model="accountAliasStr"
+                type="text"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="Ex. 77 123 45 67"
+                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+              />
             </div>
+
+            <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+              <template v-if="payWithPaydunya">
+                Envoi immédiat via PayDunya PUSH ; le solde Mille Services est débité après confirmation
+                PayDunya (sinon erreur, sans débit).
+              </template>
+              <template v-else>
+                Utilisez ce formulaire après un virement réel depuis le compte Mille Services. Le solde
+                « Mille Services » dans l’app est diminué et l’opération est tracée (
+                <span class="font-semibold text-slate-800">RETRAIT_PLATEFORME</span>).
+              </template>
+            </p>
           </div>
 
           <div class="mt-8 flex justify-center">
@@ -282,7 +290,7 @@
               :disabled="retraitSubmitting"
               @click="submitRetraitModal"
             >
-              {{ retraitSubmitting ? 'Traitement…' : 'Payer' }}
+              {{ retraitSubmitting ? 'Traitement…' : 'Enregistrer le retrait' }}
             </button>
           </div>
         </div>
@@ -309,7 +317,11 @@ type AdminTransaction = {
   montant: number | null
   wallet: string
   statut: string
-  category: 'PAIEMENT_PRESTATION' | 'PAIEMENT_ABONNEMENT' | 'RETRAIT_PRESTATAIRE'
+  category:
+    | 'PAIEMENT_PRESTATION'
+    | 'PAIEMENT_ABONNEMENT'
+    | 'RETRAIT_PRESTATAIRE'
+    | 'RETRAIT_PLATEFORME'
 }
 
 function unwrapApi<T>(response: unknown): T | undefined {
@@ -338,10 +350,9 @@ type PayoutMethod = 'ORANGE_MONEY' | 'WAVE' | 'FREE_MONEY' | 'RIB'
 const retraitModalOpen = ref(false)
 const retraitMontantStr = ref('')
 const selectedPayout = ref<PayoutMethod>('ORANGE_MONEY')
-const cardNumber = ref('')
-const cardExpiry = ref('')
-const cardCvv = ref('')
 const retraitSubmitting = ref(false)
+const payWithPaydunya = ref(false)
+const accountAliasStr = ref('')
 
 const payoutOptions: { value: PayoutMethod; label: string; class: string }[] = [
   { value: 'ORANGE_MONEY', label: 'Orange Money', class: 'bg-black text-white' },
@@ -369,11 +380,14 @@ function parseMontantXof(raw: string): number | null {
 function openRetraitModal() {
   retraitMontantStr.value = ''
   selectedPayout.value = 'ORANGE_MONEY'
-  cardNumber.value = ''
-  cardExpiry.value = ''
-  cardCvv.value = ''
+  payWithPaydunya.value = false
+  accountAliasStr.value = ''
   retraitModalOpen.value = true
 }
+
+watch(selectedPayout, (m) => {
+  if (m === 'RIB') payWithPaydunya.value = false
+})
 
 function closeRetraitModal() {
   if (retraitSubmitting.value) return
@@ -390,6 +404,16 @@ async function submitRetraitModal() {
     window.alert('Le montant dépasse le solde Mille Services disponible.')
     return
   }
+  if (payWithPaydunya.value) {
+    if (selectedPayout.value === 'RIB') {
+      window.alert('PayDunya ne prend pas en charge le RIB / carte bancaire.')
+      return
+    }
+    if (!accountAliasStr.value.trim()) {
+      window.alert('Indiquez le téléphone du bénéficiaire pour PayDunya.')
+      return
+    }
+  }
   retraitSubmitting.value = true
   try {
     await fetchAdminApi(
@@ -398,6 +422,10 @@ async function submitRetraitModal() {
         body: {
           amount,
           payoutMethod: selectedPayout.value,
+          payWithPaydunya: payWithPaydunya.value,
+          ...(payWithPaydunya.value && accountAliasStr.value.trim()
+            ? { accountAlias: accountAliasStr.value.trim() }
+            : {}),
         },
       },
       'POST',
@@ -422,7 +450,10 @@ const filteredTransactions = computed(() => {
   const list = transactions.value
   if (txTab.value === 'ms') {
     return list.filter(
-      (t) => t.category === 'PAIEMENT_PRESTATION' || t.category === 'PAIEMENT_ABONNEMENT',
+      (t) =>
+        t.category === 'PAIEMENT_PRESTATION' ||
+        t.category === 'PAIEMENT_ABONNEMENT' ||
+        t.category === 'RETRAIT_PLATEFORME',
     )
   }
   return list.filter(
@@ -481,6 +512,9 @@ function formatDate(value: string) {
 }
 
 function entiteLabel(tx: AdminTransaction) {
+  if (tx.category === 'RETRAIT_PLATEFORME') {
+    return tx.prestataireNom?.trim() || 'Retrait plateforme'
+  }
   if (tx.category === 'PAIEMENT_PRESTATION' || tx.category === 'PAIEMENT_ABONNEMENT') {
     return tx.prestataireNom?.trim() || '—'
   }

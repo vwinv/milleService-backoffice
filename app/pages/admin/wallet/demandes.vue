@@ -155,7 +155,7 @@
       >
         <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
           <div class="flex items-start justify-between gap-3">
-            <h2 id="paiement-modal-title" class="text-lg font-semibold text-slate-900">Paiement</h2>
+            <h2 id="paiement-modal-title" class="text-lg font-semibold text-slate-900">Valider la demande</h2>
             <button
               type="button"
               class="rounded-full p-1 text-rose-500 transition hover:bg-rose-50"
@@ -200,34 +200,45 @@
               </div>
             </div>
 
-            <div>
-              <p class="text-sm font-medium text-slate-700">Carte Bancaire</p>
+            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
               <input
-                v-model="cardNumber"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                placeholder="Numéro de la carte"
-                class="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
+                v-model="payWithPaydunya"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#020B51] focus:ring-[#020B51]"
+                :disabled="selectedPayout === 'RIB'"
               />
-              <div class="mt-2 grid grid-cols-2 gap-2">
-                <input
-                  v-model="cardExpiry"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="Date d'expiration"
-                  class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
-                />
-                <input
-                  v-model="cardCvv"
-                  type="text"
-                  inputmode="numeric"
-                  autocomplete="off"
-                  placeholder="CVV"
-                  class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#020B51]/40"
-                />
-              </div>
+              <span class="text-sm leading-snug text-slate-700">
+                <span class="font-semibold text-slate-900">Envoyer via PayDunya</span>
+                (débit du compte marchand PayDunya, API PUSH). Incompatible avec « Carte bancaire ».
+              </span>
+            </label>
+
+            <div v-if="payWithPaydunya">
+              <label class="text-sm font-medium text-slate-700">Téléphone bénéficiaire</label>
+              <input
+                v-model="accountAliasStr"
+                type="text"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="Ex. 77 123 45 67 (défaut : téléphone du profil)"
+                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+              />
+              <p v-if="paymentRow?.prestataireTelephone" class="mt-1 text-xs text-slate-500">
+                Profil : {{ paymentRow.prestataireTelephone }}
+              </p>
             </div>
+
+            <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+              <template v-if="payWithPaydunya">
+                PayDunya envoie les fonds sur le mobile money choisi, puis le wallet prestataire est débité
+                (ou la demande reste en attente si l’opérateur confirme plus tard).
+              </template>
+              <template v-else>
+                Après avoir versé les fonds au prestataire (Orange Money, Wave, etc.), validez ici : le
+                solde de son wallet sera débité et la demande passera en
+                <span class="font-semibold text-slate-800">Accepté</span>.
+              </template>
+            </p>
           </div>
 
           <div class="mt-8 flex justify-center">
@@ -237,7 +248,7 @@
               :disabled="paymentSubmitting"
               @click="submitPaymentModal"
             >
-              {{ paymentSubmitting ? 'Traitement…' : 'Payer' }}
+              {{ paymentSubmitting ? 'Traitement…' : 'Valider le versement' }}
             </button>
           </div>
         </div>
@@ -266,6 +277,7 @@ type WithdrawalRow = {
   date: string
   prestataireId: string
   prestataireNom: string
+  prestataireTelephone?: string | null
   montant: number | null
   wallet: string
   method: PayoutMethod
@@ -323,10 +335,9 @@ const actingId = ref<string | null>(null)
 const paymentModalOpen = ref(false)
 const paymentRow = ref<WithdrawalRow | null>(null)
 const selectedPayout = ref<PayoutMethod>('ORANGE_MONEY')
-const cardNumber = ref('')
-const cardExpiry = ref('')
-const cardCvv = ref('')
 const paymentSubmitting = ref(false)
+const payWithPaydunya = ref(false)
+const accountAliasStr = ref('')
 
 const payoutOptions: { value: PayoutMethod; label: string; class: string }[] = [
   { value: 'ORANGE_MONEY', label: 'Orange Money', class: 'bg-black text-white' },
@@ -412,11 +423,14 @@ function openPaymentModal(row: WithdrawalRow) {
   actionError.value = ''
   paymentRow.value = row
   selectedPayout.value = row.method && payoutOptions.some((o) => o.value === row.method) ? row.method : 'ORANGE_MONEY'
-  cardNumber.value = ''
-  cardExpiry.value = ''
-  cardCvv.value = ''
+  payWithPaydunya.value = false
+  accountAliasStr.value = ''
   paymentModalOpen.value = true
 }
+
+watch(selectedPayout, (m) => {
+  if (m === 'RIB') payWithPaydunya.value = false
+})
 
 function closePaymentModal() {
   if (paymentSubmitting.value) return
@@ -427,27 +441,43 @@ function closePaymentModal() {
 async function submitPaymentModal() {
   const row = paymentRow.value
   if (!row || paymentSubmitting.value) return
+  if (payWithPaydunya.value && selectedPayout.value === 'RIB') {
+    actionError.value = 'PayDunya ne prend pas en charge le RIB / carte bancaire.'
+    return
+  }
   paymentSubmitting.value = true
   actionError.value = ''
   actingId.value = row.id
   try {
-    await fetchAdminApi(
+    const response = await fetchAdminApi<unknown>(
       `/admin/wallet/withdrawal-requests/${row.id}`,
       {
         body: {
           decision: 'accept',
           payoutMethod: selectedPayout.value,
+          payWithPaydunya: payWithPaydunya.value,
+          ...(accountAliasStr.value.trim()
+            ? { accountAlias: accountAliasStr.value.trim() }
+            : {}),
         },
       },
       'PATCH',
     )
+    const payload = unwrapApi<{
+      paydunyaStatus?: string
+      message?: string
+      status?: string
+    }>(response)
+    if (payload?.paydunyaStatus === 'pending' && payload.message) {
+      window.alert(payload.message)
+    }
     paymentModalOpen.value = false
     paymentRow.value = null
     await loadRequests()
     await loadSummary()
   } catch (e) {
     console.error(e)
-    actionError.value = extractApiMessage(e, 'Paiement / acceptation impossible.')
+    actionError.value = extractApiMessage(e, 'Validation / acceptation impossible.')
   } finally {
     paymentSubmitting.value = false
     actingId.value = null

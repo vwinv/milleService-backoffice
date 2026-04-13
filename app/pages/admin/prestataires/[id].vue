@@ -63,6 +63,18 @@
                   </span>
                   <span class="truncate">{{ p.email }}</span>
                 </p>
+                <p class="flex items-start justify-center gap-2 sm:col-span-2 sm:justify-start">
+                  <span class="mt-0.5 shrink-0 text-slate-400">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </span>
+                  <span class="min-w-0 whitespace-pre-wrap break-words text-left text-slate-700">
+                    <span class="font-semibold text-slate-800">Adresse :</span>
+                    {{ formatAdresse(p.adresse) }}
+                  </span>
+                </p>
                 <p class="flex items-center justify-center gap-2 sm:justify-start sm:col-span-2">
                   <span class="text-slate-400">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
@@ -740,6 +752,11 @@ function formatDate(value: string) {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleDateString('fr-FR')
+}
+
+function formatAdresse(value: string | null | undefined) {
+  const t = value?.trim()
+  return t && t.length > 0 ? t : '—'
 }
 
 function formatDateTime(value: string) {

@@ -1,1 +1,1 @@
-{"root":["./types/nitro-nuxt.d.ts","../server/api/document-preview.get.ts","./types/nitro.d.ts"],"errors":true,"version":"6.0.2"}
+{"root":["./types/nitro-nuxt.d.ts","../server/api/document-preview.get.ts","../server/routes/__nest/[...].ts","./types/nitro.d.ts"],"errors":true,"version":"6.0.2"}

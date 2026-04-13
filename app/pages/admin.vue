@@ -8,9 +8,60 @@
     </template>
 
     <template v-else>
-      <div class="flex min-h-screen">
+      <div class="flex h-screen overflow-hidden">
+        <Teleport to="body">
+          <div
+            v-if="mobileMenuOpen"
+            class="fixed inset-0 z-[70] bg-black/35 lg:hidden"
+            @click="closeMobileMenu"
+          />
+          <aside
+            class="fixed inset-y-0 left-0 z-[80] flex w-[270px] max-w-[85vw] flex-col border-r border-slate-200 bg-white px-5 py-6 shadow-2xl transition-transform duration-200 lg:hidden"
+            :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
+          >
+            <div class="mb-6 flex items-center justify-between">
+              <img
+                src="/images/logo.png"
+                alt="Mille Services"
+                class="h-14 w-auto object-contain"
+                width="64"
+                height="64"
+              />
+              <button
+                type="button"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                aria-label="Fermer le menu"
+                @click="closeMobileMenu"
+              >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav class="space-y-2 overflow-y-auto text-sm font-medium">
+              <NuxtLink to="/admin" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Home</NuxtLink>
+              <NuxtLink to="/admin/prestataires" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Prestataires</NuxtLink>
+              <NuxtLink to="/admin/clients" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Clients</NuxtLink>
+              <NuxtLink to="/admin/demandes-mille-services" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Demande Mille Services</NuxtLink>
+              <NuxtLink to="/admin/notifications" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Notifications</NuxtLink>
+              <NuxtLink to="/admin/services" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Métiers</NuxtLink>
+              <NuxtLink to="/admin/offres" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Offres</NuxtLink>
+              <NuxtLink to="/admin/wallet" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Wallet</NuxtLink>
+              <NuxtLink to="/admin/wallet/demandes" class="block rounded-full px-4 py-2.5 text-slate-700 hover:bg-slate-100" @click="closeMobileMenu">Demandes Wallet</NuxtLink>
+              <button
+                type="button"
+                class="mt-2 block w-full rounded-full px-4 py-2.5 text-left text-rose-500 hover:bg-rose-50"
+                @click="logoutAdmin"
+              >
+                Logout
+              </button>
+            </nav>
+          </aside>
+        </Teleport>
+
         <aside
-          class="hidden w-[230px] flex-col border-r border-slate-200 bg-white px-5 py-6 lg:flex"
+          class="hidden h-screen w-[230px] flex-col overflow-y-auto border-r border-slate-200 bg-white px-5 py-6 lg:flex"
         >
           <div class="mb-8 flex justify-center">
             <img
@@ -186,11 +237,23 @@
           </nav>
         </aside>
 
-        <div ref="dashboardExportRef" class="flex min-w-0 flex-1 flex-col">
-          <header class="px-4 pb-2 pt-4 sm:px-6 lg:px-8">
+        <div ref="dashboardExportRef" class="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header class="shrink-0 px-4 pb-2 pt-4 sm:px-6 lg:px-8">
             <div
               class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-transparent"
             >
+              <div class="flex w-full items-center gap-2 lg:hidden">
+                <button
+                  type="button"
+                  class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm"
+                  aria-label="Ouvrir le menu"
+                  @click="mobileMenuOpen = true"
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                </button>
+              </div>
               <label class="relative block min-w-[220px] flex-1 max-w-xl">
                 <input
                   type="search"
@@ -248,7 +311,7 @@
             </div>
           </header>
 
-          <main class="px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+          <main class="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2 sm:px-6 lg:px-8">
             <NuxtPage />
           </main>
         </div>
@@ -273,6 +336,7 @@ const isAdminLogin = computed(() => {
 const adminDisplayNameCookie = useCookie<string | null>('admin_display_name')
 const dashboardExportRef = ref<HTMLElement | null>(null)
 const isExportingPdf = ref(false)
+const mobileMenuOpen = ref(false)
 
 const adminDisplayName = computed(() => {
   const raw = adminDisplayNameCookie.value?.trim()
@@ -305,8 +369,13 @@ onMounted(() => {
 })
 
 function logoutAdmin() {
+  mobileMenuOpen.value = false
   clearAdminSession()
   router.replace('/admin/login')
+}
+
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
 }
 
 async function exportDashboardPdf() {
@@ -353,4 +422,11 @@ useHead({
   titleTemplate: (titleChunk) =>
     titleChunk ? `${titleChunk} — Admin Mille Services` : 'Admin — Mille Services',
 })
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileMenuOpen.value = false
+  },
+)
 </script>

@@ -649,10 +649,10 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "siteUrl": "https://mille-services.com",
-    "apiBase": "http://127.0.0.1:3001"
+    "apiBase": "https://milleservice-backend.onrender.com"
   },
   "openaiApiKey": "",
-  "apiBackend": "http://127.0.0.1:3001"
+  "apiBackend": "https://milleservice-backend.onrender.com"
 };
 const envOptions = {
   prefix: "NITRO_",

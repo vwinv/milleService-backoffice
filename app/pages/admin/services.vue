@@ -164,16 +164,17 @@
             <tr>
               <th class="px-4 py-3 font-medium">Date d'ajout</th>
               <th class="px-4 py-3 font-medium">Métiers</th>
+              <th class="px-4 py-3 font-medium">Tarif</th>
               <th class="px-4 py-3 font-medium">Statut</th>
               <th class="px-4 py-3 font-medium text-right"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 text-slate-700">
             <tr v-if="loading">
-              <td colspan="4" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
+              <td colspan="5" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
             <tr v-else-if="!paginatedRows.length">
-              <td colspan="4" class="px-4 py-8 text-center text-slate-400">
+              <td colspan="5" class="px-4 py-8 text-center text-slate-400">
                 <template v-if="items.length && !filteredTotal">
                   Aucun résultat pour ce filtre ({{ items.length }} service(s) en base ont un autre statut).
                   Onglet « Tous » pour tout afficher.
@@ -186,6 +187,7 @@
             <tr v-for="row in paginatedRows" :key="row.id">
               <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ formatDate(row.createdAt) }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ row.libelle }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ formatMoney(row.tarif) }}</td>
               <td class="px-4 py-3">
                 <button
                   type="button"
@@ -203,6 +205,13 @@
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="inline-flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    @click="openEditModal(row)"
+                  >
+                    Modifier
+                  </button>
                   <button
                     v-if="row.actif"
                     type="button"
@@ -238,7 +247,9 @@
         @click.self="closeModal"
       >
         <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-          <h3 class="text-lg font-semibold text-slate-800">Nouveau métier</h3>
+          <h3 class="text-lg font-semibold text-slate-800">
+            {{ modalMode === 'create' ? 'Nouveau métier' : 'Modifier métier' }}
+          </h3>
           <label class="mt-4 block text-sm font-medium text-slate-700">Libellé</label>
           <input
             v-model="modalLibelle"
@@ -247,6 +258,16 @@
             placeholder="Ex. Plomberie"
             @keydown.enter.prevent="submitModal"
           />
+          <label class="mt-4 block text-sm font-medium text-slate-700">Tarif (FCFA)</label>
+          <input
+            v-model="modalTarif"
+            type="text"
+            inputmode="decimal"
+            class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]/40"
+            placeholder="Ex. 5000"
+            @keydown.enter.prevent="submitModal"
+          />
+          <p v-if="modalError" class="mt-2 text-sm text-rose-700">{{ modalError }}</p>
           <div class="mt-6 flex justify-end gap-2">
             <button
               type="button"
@@ -258,7 +279,7 @@
             <button
               type="button"
               class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="modalSaving || !modalLibelle.trim()"
+              :disabled="modalSaving || !modalLibelle.trim() || !modalTarif.trim()"
               @click="submitModal"
             >
               {{ modalSaving ? 'Enregistrement…' : 'Enregistrer' }}
@@ -309,6 +330,7 @@ type ServiceRow = {
   id: string
   libelle: string
   slug: string
+  tarif: number | null
   actif: boolean
   createdAt: string
   prestatairesCount: number
@@ -344,7 +366,11 @@ const blockedDeactivateLibelle = ref('')
 const blockedDeactivateCount = ref(0)
 
 const modalOpen = ref(false)
+const modalMode = ref<'create' | 'edit'>('create')
+const modalServiceId = ref<string | null>(null)
 const modalLibelle = ref('')
+const modalTarif = ref<string>('')
+const modalError = ref('')
 const modalSaving = ref(false)
 
 const stats = computed(() => {
@@ -421,31 +447,97 @@ function formatDate(value: string) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function formatMoney(value: number | null | undefined) {
+  if (value == null || Number.isNaN(Number(value))) return '—'
+  return `${new Intl.NumberFormat('fr-FR').format(Number(value))} FCFA`
+}
+
+function parseTarifInput(value: string): number | null {
+  const raw = value.trim()
+  if (!raw) return null
+  const normalized = raw
+    .replace(/\s/g, '')
+    .replace(/\u00a0/g, '')
+    .replace(/\u202f/g, '')
+    .replace(',', '.')
+  const n = Number(normalized)
+  if (!Number.isFinite(n)) return Number.NaN
+  return n
+}
+
 function openCreateModal() {
   actionError.value = ''
+  modalError.value = ''
+  modalMode.value = 'create'
+  modalServiceId.value = null
   modalLibelle.value = ''
+  modalTarif.value = ''
+  modalOpen.value = true
+}
+
+function openEditModal(row: ServiceRow) {
+  actionError.value = ''
+  modalError.value = ''
+  modalMode.value = 'edit'
+  modalServiceId.value = row.id
+  modalLibelle.value = row.libelle
+  modalTarif.value = row.tarif != null ? String(row.tarif) : ''
   modalOpen.value = true
 }
 
 function closeModal() {
   if (modalSaving.value) return
   modalOpen.value = false
+  modalMode.value = 'create'
+  modalServiceId.value = null
   modalLibelle.value = ''
+  modalTarif.value = ''
+  modalError.value = ''
 }
 
 async function submitModal() {
   const libelle = modalLibelle.value.trim()
   if (!libelle || modalSaving.value) return
+  modalError.value = ''
+  const parsedTarif = parseTarifInput(modalTarif.value)
+  if (parsedTarif == null) {
+    modalError.value = 'Tarif requis.'
+    return
+  }
+  if (!Number.isFinite(parsedTarif) || parsedTarif < 0) {
+    modalError.value = 'Tarif invalide.'
+    return
+  }
   modalSaving.value = true
   actionError.value = ''
   try {
-    await fetchAdminApi('/admin/services', { body: { libelle } }, 'POST')
+    if (modalMode.value === 'create') {
+      await fetchAdminApi(
+        '/admin/services',
+        { body: { libelle, tarif: parsedTarif } },
+        'POST',
+      )
+    } else {
+      if (!modalServiceId.value) {
+        modalError.value = 'Métier introuvable.'
+        return
+      }
+      await fetchAdminApi(
+        `/admin/services/${modalServiceId.value}`,
+        { body: { libelle, tarif: parsedTarif } },
+        'PATCH',
+      )
+    }
     modalOpen.value = false
+    modalMode.value = 'create'
+    modalServiceId.value = null
     modalLibelle.value = ''
+    modalTarif.value = ''
+    modalError.value = ''
     await loadServices()
   } catch (e) {
     console.error(e)
-    actionError.value = extractApiMessage(e, 'Enregistrement impossible.')
+    modalError.value = extractApiMessage(e, 'Enregistrement impossible.')
   } finally {
     modalSaving.value = false
   }
