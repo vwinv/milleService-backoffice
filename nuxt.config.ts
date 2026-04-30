@@ -36,7 +36,7 @@ export default defineNuxtConfig({
       process.env.NUXT_PUBLIC_API_BASE ||
       process.env.NUXT_PUBLIC_API_URL ||
       //'http://127.0.0.1:3001',
-      'https://milleservice-backend.onrender.com',
+      'https://milleservice-backend-aacp.onrender.com',
     public: {
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
