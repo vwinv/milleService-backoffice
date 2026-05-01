@@ -46,7 +46,7 @@ export default defineNuxtConfig({
        * d’exposer une URL d’API dans le bundle ; définir NUXT_API_BACKEND sur l’hôte du backoffice.
        */
       //apiBase: 'http://127.0.0.1:3001',
-      apiBase: 'https://milleservice-backend.onrender.com',
+      apiBase: 'https://milleservice-backend-aacp.onrender.com',
     }
   },
 

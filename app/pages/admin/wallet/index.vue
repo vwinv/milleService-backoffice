@@ -245,20 +245,12 @@
               </div>
             </div>
 
-            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
-              <input
-                v-model="payWithPaydunya"
-                type="checkbox"
-                class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#020B51] focus:ring-[#020B51]"
-                :disabled="selectedPayout === 'RIB'"
-              />
-              <span class="text-sm leading-snug text-slate-700">
-                <span class="font-semibold text-slate-900">Envoyer via PayDunya</span>
-                (débit du compte marchand PayDunya). Incompatible avec « Carte bancaire ».
-              </span>
-            </label>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-snug text-slate-700">
+              <span class="font-semibold text-slate-900">Envoi via PayDunya obligatoire</span>
+              (débit du compte marchand PayDunya). « Carte bancaire » n'est pas disponible dans ce flux.
+            </div>
 
-            <div v-if="payWithPaydunya">
+            <div>
               <label class="text-sm font-medium text-slate-700">Téléphone bénéficiaire</label>
               <input
                 v-model="accountAliasStr"
@@ -271,15 +263,8 @@
             </div>
 
             <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
-              <template v-if="payWithPaydunya">
-                Envoi immédiat via PayDunya PUSH ; le solde Mille Services est débité après confirmation
-                PayDunya (sinon erreur, sans débit).
-              </template>
-              <template v-else>
-                Utilisez ce formulaire après un virement réel depuis le compte Mille Services. Le solde
-                « Mille Services » dans l’app est diminué et l’opération est tracée (
-                <span class="font-semibold text-slate-800">RETRAIT_PLATEFORME</span>).
-              </template>
+              Envoi immédiat via PayDunya PUSH ; le solde Mille Services est débité après confirmation
+              PayDunya (sinon erreur, sans débit).
             </p>
           </div>
 
@@ -351,7 +336,7 @@ const retraitModalOpen = ref(false)
 const retraitMontantStr = ref('')
 const selectedPayout = ref<PayoutMethod>('ORANGE_MONEY')
 const retraitSubmitting = ref(false)
-const payWithPaydunya = ref(false)
+const payWithPaydunya = ref(true)
 const accountAliasStr = ref('')
 
 const payoutOptions: { value: PayoutMethod; label: string; class: string }[] = [
@@ -361,11 +346,6 @@ const payoutOptions: { value: PayoutMethod; label: string; class: string }[] = [
     value: 'FREE_MONEY',
     label: 'Free Money',
     class: 'border-2 border-red-500 bg-white text-slate-900',
-  },
-  {
-    value: 'RIB',
-    label: 'Carte bancaire',
-    class: 'border border-slate-300 bg-slate-100 text-slate-800',
   },
 ]
 
@@ -380,14 +360,10 @@ function parseMontantXof(raw: string): number | null {
 function openRetraitModal() {
   retraitMontantStr.value = ''
   selectedPayout.value = 'ORANGE_MONEY'
-  payWithPaydunya.value = false
+  payWithPaydunya.value = true
   accountAliasStr.value = ''
   retraitModalOpen.value = true
 }
-
-watch(selectedPayout, (m) => {
-  if (m === 'RIB') payWithPaydunya.value = false
-})
 
 function closeRetraitModal() {
   if (retraitSubmitting.value) return
@@ -404,15 +380,13 @@ async function submitRetraitModal() {
     window.alert('Le montant dépasse le solde Mille Services disponible.')
     return
   }
-  if (payWithPaydunya.value) {
-    if (selectedPayout.value === 'RIB') {
-      window.alert('PayDunya ne prend pas en charge le RIB / carte bancaire.')
-      return
-    }
-    if (!accountAliasStr.value.trim()) {
-      window.alert('Indiquez le téléphone du bénéficiaire pour PayDunya.')
-      return
-    }
+  if (selectedPayout.value === 'RIB') {
+    window.alert('Carte bancaire (RIB) n’est pas disponible pour ce retrait.')
+    return
+  }
+  if (!accountAliasStr.value.trim()) {
+    window.alert('Indiquez le téléphone du bénéficiaire (obligatoire via PayDunya).')
+    return
   }
   retraitSubmitting.value = true
   try {
@@ -422,10 +396,8 @@ async function submitRetraitModal() {
         body: {
           amount,
           payoutMethod: selectedPayout.value,
-          payWithPaydunya: payWithPaydunya.value,
-          ...(payWithPaydunya.value && accountAliasStr.value.trim()
-            ? { accountAlias: accountAliasStr.value.trim() }
-            : {}),
+          payWithPaydunya: true,
+          accountAlias: accountAliasStr.value.trim(),
         },
       },
       'POST',
