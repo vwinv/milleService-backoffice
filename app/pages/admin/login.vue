@@ -202,6 +202,22 @@ async function tryAdminLogin(baseURL: string): Promise<LoginApiResponse> {
   })
 }
 
+function adminLoginCandidateBases(configuredBase: string): string[] {
+  const localBases = [
+    'http://127.0.0.1:3001',
+    'http://localhost:3001',
+    'http://[::1]:3001',
+  ]
+  const proxyBase = `${window.location.origin}/__nest`
+  if (configuredBase) {
+    return import.meta.dev
+      ? [...localBases, configuredBase]
+      : [configuredBase, ...localBases]
+  }
+  /** Aligné sur useAdminFetch : sans apiBase public, connexion via le proxy Nitro (pas de CORS). */
+  return import.meta.dev ? [...localBases, proxyBase] : [proxyBase, ...localBases]
+}
+
 async function submitLogin() {
   if (isSubmitting.value) return
   errorMessage.value = ''
@@ -209,18 +225,7 @@ async function submitLogin() {
 
   try {
     const configuredBase = String(config.public.apiBase ?? '').trim()
-    const localBases = [
-      'http://127.0.0.1:3001',
-      'http://localhost:3001',
-      'http://[::1]:3001',
-    ]
-    /** En dev : essayer l’API locale d’abord (même DB que ton .env) ; en prod : l’URL configurée en premier. */
-    const candidateBases = import.meta.dev
-      ? [...localBases, ...(configuredBase ? [configuredBase] : [])]
-      : [
-          ...(configuredBase ? [configuredBase] : []),
-          ...localBases,
-        ]
+    const candidateBases = adminLoginCandidateBases(configuredBase)
     let response: LoginApiResponse | null = null
     let lastError: unknown = null
 

@@ -41,12 +41,11 @@ export default defineNuxtConfig({
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
       /**
-       * Si défini : appels directs du navigateur vers cette URL (CORS doit autoriser le backoffice).
-       * Si vide (défaut) : appels vers /__nest/... proxyfiables par Nitro → plus besoin
-       * d’exposer une URL d’API dans le bundle ; définir NUXT_API_BACKEND sur l’hôte du backoffice.
+       * Vide par défaut : le client appelle /__nest (même origine, pas de CORS). Définir NUXT_API_BACKEND
+       * sur l’hébergeur du backoffice pour que Nitro proxifie vers Nest.
+       * NUXT_PUBLIC_API_BASE : appels directs navigateur → Nest (ajouter l’origine du backoffice dans CORS_ORIGINS).
        */
-      //apiBase: 'http://127.0.0.1:3001',
-      apiBase: 'https://milleservice-backend-aacp.onrender.com',
+      apiBase: '',
     }
   },
 
