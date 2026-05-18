@@ -104,7 +104,8 @@
 
         <button
           type="button"
-          class="rounded-full bg-[#020B51] px-5 py-2.5 text-sm font-semibold text-white shadow-sm"
+          class="rounded-full bg-[#020B51] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#020B51]/90"
+          @click="openCreateModal"
         >
           Ajouter un prestataire
         </button>
@@ -189,6 +190,99 @@
       </div>
     </section>
 
+    <Teleport to="body">
+      <div
+        v-if="createModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#140C44]/50 p-4 backdrop-blur-md"
+        @click.self="closeCreateModal"
+      >
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-slate-800">Nouveau prestataire</h3>
+          <p class="mt-1 text-xs text-slate-500">
+            Le compte sera créé en statut « Inactif » et devra être vérifié.
+          </p>
+
+          <div class="mt-4 grid gap-3">
+            <input
+              v-model="createForm.name"
+              type="text"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Nom ou raison sociale *"
+            />
+            <input
+              v-model="createForm.telephone"
+              type="tel"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Téléphone *"
+            />
+            <input
+              v-model="createForm.adresse"
+              type="text"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Adresse *"
+            />
+            <input
+              v-model="createForm.email"
+              type="email"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Email (optionnel)"
+            />
+            <input
+              v-model="createForm.password"
+              type="text"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Mot de passe initial * (min 8 caractères)"
+            />
+            <textarea
+              v-model="createForm.bio"
+              rows="2"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              placeholder="Bio (optionnel)"
+            />
+
+            <div>
+              <p class="mb-2 text-xs font-medium text-slate-600">Métier(s)</p>
+              <div class="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                <label
+                  v-for="opt in serviceFilterOptions"
+                  :key="opt.id"
+                  class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <input
+                    v-model="createForm.serviceIds"
+                    type="checkbox"
+                    :value="opt.id"
+                    class="rounded border-slate-300"
+                  />
+                  <span>{{ opt.libelle }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="createError" class="mt-3 text-sm text-rose-600">{{ createError }}</p>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              :disabled="creating"
+              @click="closeCreateModal"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+              :disabled="creating || !canSubmitCreate"
+              @click="submitCreate"
+            >
+              {{ creating ? 'Création…' : 'Créer le prestataire' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -233,6 +327,87 @@ const serviceFilterDetailsRef = ref<HTMLDetailsElement | null>(null)
 const loadError = ref('')
 const actifToggleError = ref('')
 const togglingPrestataireId = ref<string | null>(null)
+
+const createModalOpen = ref(false)
+const creating = ref(false)
+const createError = ref('')
+const createForm = reactive({
+  name: '',
+  telephone: '',
+  adresse: '',
+  email: '',
+  password: '',
+  bio: '',
+  serviceIds: [] as string[],
+})
+
+const canSubmitCreate = computed(() => {
+  return (
+    createForm.name.trim().length > 0 &&
+    createForm.telephone.trim().length > 0 &&
+    createForm.adresse.trim().length >= 3 &&
+    createForm.password.trim().length >= 8
+  )
+})
+
+function openCreateModal() {
+  createError.value = ''
+  createForm.name = ''
+  createForm.telephone = ''
+  createForm.adresse = ''
+  createForm.email = ''
+  createForm.password = ''
+  createForm.bio = ''
+  createForm.serviceIds = []
+  createModalOpen.value = true
+}
+
+function closeCreateModal() {
+  if (creating.value) return
+  createModalOpen.value = false
+}
+
+async function submitCreate() {
+  if (!canSubmitCreate.value || creating.value) return
+  creating.value = true
+  createError.value = ''
+  try {
+    await fetchAdminApi(
+      '/admin/prestataires',
+      {
+        body: {
+          role: 'PRESTATAIRE',
+          name: createForm.name.trim(),
+          telephone: createForm.telephone.trim(),
+          adresse: createForm.adresse.trim(),
+          password: createForm.password,
+          email: createForm.email.trim() || undefined,
+          bio: createForm.bio.trim() || undefined,
+          serviceIds: createForm.serviceIds.length
+            ? createForm.serviceIds
+            : undefined,
+        },
+      },
+      'POST',
+    )
+    createModalOpen.value = false
+    await loadPrestataires()
+  } catch (e) {
+    const status =
+      typeof e === 'object' && e && 'statusCode' in e
+        ? Number((e as { statusCode?: number }).statusCode)
+        : 0
+    if (status === 404) {
+      createError.value =
+        'Route API absente sur le serveur (POST /admin/prestataires). Redémarrez le backend en local (npm run build && npm run start) ou redéployez l’API sur Render.'
+    } else {
+      createError.value =
+        extractApiMessage(e) || 'Création impossible. Vérifiez les informations saisies.'
+    }
+  } finally {
+    creating.value = false
+  }
+}
 
 async function loadPrestataires() {
   try {
