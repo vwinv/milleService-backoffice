@@ -1,4 +1,10 @@
-export { ADMIN_SESSION_MAX_AGE_SEC, clearAdminSession } from './useAdminSession'
+import {
+  ADMIN_SESSION_MAX_AGE_SEC,
+  clearAdminSession,
+  getAdminAccessToken,
+} from './useAdminSession'
+
+export { ADMIN_SESSION_MAX_AGE_SEC, clearAdminSession }
 
 function isUnauthorized(err: unknown): boolean {
   const e = err as {

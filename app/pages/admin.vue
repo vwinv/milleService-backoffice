@@ -336,6 +336,8 @@
 </template>
 
 <script setup lang="ts">
+import { clearAdminSession, hydrateAdminSessionFromStorage } from '~/composables/useAdminSession'
+
 const route = useRoute()
 const router = useRouter()
 const inWalletSection = computed(() => route.path.startsWith('/admin/wallet'))
