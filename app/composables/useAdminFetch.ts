@@ -1,7 +1,4 @@
-/**
- * Session admin côté navigateur : alignée sur la durée JWT (24h par défaut côté API).
- */
-export const ADMIN_SESSION_MAX_AGE_SEC = 60 * 60 * 24
+export { ADMIN_SESSION_MAX_AGE_SEC, clearAdminSession } from './useAdminSession'
 
 function isUnauthorized(err: unknown): boolean {
   const e = err as {
@@ -18,49 +15,26 @@ function shouldRedirectOn401(): boolean {
   return path.startsWith('/admin') && path !== '/admin/login'
 }
 
-export function clearAdminSession() {
-  if (!import.meta.client) return
-  const opts = { path: '/', sameSite: 'lax' as const }
-  useCookie<string | null>('admin_access_token', opts).value = null
-  useCookie<string | null>('admin_role', opts).value = null
-  useCookie<string | null>('admin_display_name', opts).value = null
-  localStorage.removeItem('admin_access_token')
-  localStorage.removeItem('admin_role')
-  localStorage.removeItem('admin_display_name')
-}
-
 function resolveAdminApiBases(config: ReturnType<typeof useRuntimeConfig>): string[] {
   const configured = String(config.public.apiBase ?? '').trim()
-  if (configured) {
-    if (configured.startsWith('https://')) {
-      return [configured]
-    }
-    return [
-      configured,
-      'http://127.0.0.1:3001',
-      'http://localhost:3001',
-      'http://[::1]:3001',
-    ]
+  if (!configured) {
+    return import.meta.dev
+      ? ['http://127.0.0.1:3001', 'http://localhost:3001', 'http://[::1]:3001']
+      : ['https://milleservice-backend-aacp.onrender.com']
   }
-  /** Mode proxy : le navigateur appelle uniquement l’origine du backoffice + /__nest */
-  if (import.meta.client) {
-    return [`${window.location.origin}/__nest`]
+  if (configured.startsWith('https://')) {
+    return [configured]
   }
-  try {
-    const u = useRequestURL()
-    return [`${u.origin}/__nest`]
-  } catch {
-    return ['http://127.0.0.1:3000/__nest']
-  }
+  return [
+    configured,
+    'http://127.0.0.1:3001',
+    'http://localhost:3001',
+    'http://[::1]:3001',
+  ]
 }
 
 export function useAdminFetch() {
   const config = useRuntimeConfig()
-  const token = useCookie<string | null>('admin_access_token', {
-    path: '/',
-    sameSite: 'lax',
-  })
-
   const apiBases = computed(() => resolveAdminApiBases(config))
 
   async function fetchAdminApi<T>(
@@ -69,8 +43,7 @@ export function useAdminFetch() {
     method: 'GET' | 'PATCH' | 'DELETE' | 'POST' = 'GET',
   ): Promise<T> {
     let lastError: unknown = null
-    const authToken =
-      token.value || (import.meta.client ? localStorage.getItem('admin_access_token') : null)
+    const authToken = getAdminAccessToken()
 
     const bases = resolveAdminApiBases(config)
     for (const base of bases) {
@@ -101,7 +74,7 @@ export function useAdminFetch() {
       }
     }
     const hint =
-      'En prod : définir NUXT_API_BACKEND (URL Nest) sur l’hébergeur du backoffice, ou NUXT_PUBLIC_API_BASE pour appels directs. Sans proxy ni URL publique, le navigateur n’atteint pas l’API.'
+      'Vérifiez que le backend Nest est démarré et que NUXT_PUBLIC_API_BASE pointe vers l’API (CORS_ORIGINS sur le backend).'
     throw lastError ?? new Error(`API admin indisponible. ${hint}`)
   }
 

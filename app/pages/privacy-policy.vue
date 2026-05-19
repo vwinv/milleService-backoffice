@@ -29,7 +29,7 @@
         </li>
         <li>
           <span class="font-semibold">Données de documents prestataire :</span>
-          pièces d’identité, casier judiciaire, certificats (via upload sécurisé).
+          pièces d’identité, certificat de résidence, diplôme (via upload sécurisé).
         </li>
         <li>
           <span class="font-semibold">Données techniques :</span>

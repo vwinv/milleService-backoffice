@@ -3,17 +3,17 @@ export default defineNuxtRouteMiddleware((to) => {
 
   const isLoginPage = to.path === '/admin/login'
 
-  const accessToken = useCookie<string | null>('admin_access_token')
-  const adminRole = useCookie<string | null>('admin_role')
+  if (import.meta.client) {
+    hydrateAdminSessionFromStorage()
+  }
 
-  const isAuthenticated =
-    Boolean(accessToken.value) && adminRole.value === 'ADMIN'
+  const authenticated = isAdminAuthenticated()
 
-  if (!isAuthenticated && !isLoginPage) {
+  if (!authenticated && !isLoginPage) {
     return navigateTo('/admin/login', { replace: true })
   }
 
-  if (isAuthenticated && isLoginPage) {
+  if (authenticated && isLoginPage) {
     return navigateTo('/admin', { replace: true })
   }
 })

@@ -208,14 +208,9 @@ function adminLoginCandidateBases(configuredBase: string): string[] {
     'http://localhost:3001',
     'http://[::1]:3001',
   ]
-  const proxyBase = `${window.location.origin}/__nest`
-  if (configuredBase) {
-    return import.meta.dev
-      ? [...localBases, configuredBase]
-      : [configuredBase, ...localBases]
-  }
-  /** Aligné sur useAdminFetch : sans apiBase public, connexion via le proxy Nitro (pas de CORS). */
-  return import.meta.dev ? [...localBases, proxyBase] : [proxyBase, ...localBases]
+  const prodBase = 'https://milleservice-backend-aacp.onrender.com'
+  const apiBase = configuredBase || (import.meta.dev ? localBases[0] : prodBase)
+  return import.meta.dev ? [...localBases, apiBase] : [apiBase, ...localBases]
 }
 
 async function submitLogin() {
@@ -248,36 +243,12 @@ async function submitLogin() {
       throw new Error('Connexion admin invalide')
     }
 
-    const oneDay = 60 * 60 * 24
-    const cookieMaxAge = rememberMe.value ? 60 * 60 * 24 * 30 : oneDay
-
-    useCookie('admin_access_token', {
-      sameSite: 'lax',
-      secure: false,
-      maxAge: cookieMaxAge,
-      path: '/',
-    }).value = accessToken
-
-    useCookie('admin_role', {
-      sameSite: 'lax',
-      secure: false,
-      maxAge: cookieMaxAge,
-      path: '/',
-    }).value = 'ADMIN'
-
     const displayName = userEmail?.trim() || email.value.trim() || 'Admin'
-    useCookie('admin_display_name', {
-      sameSite: 'lax',
-      secure: false,
-      maxAge: cookieMaxAge,
-      path: '/',
-    }).value = displayName
-
-    if (process.client) {
-      localStorage.setItem('admin_access_token', accessToken)
-      localStorage.setItem('admin_role', 'ADMIN')
-      localStorage.setItem('admin_display_name', displayName)
-    }
+    setAdminSession({
+      accessToken,
+      displayName,
+      remember: rememberMe.value,
+    })
 
     await router.push('/admin')
   } catch (err: unknown) {

@@ -348,7 +348,7 @@ const isAdminLogin = computed(() => {
   const path = (route.path || '/').replace(/\/+$/, '') || '/'
   return path === '/admin/login'
 })
-const adminDisplayNameCookie = useCookie<string | null>('admin_display_name')
+const { displayName: adminDisplayNameCookie } = useAdminSessionCookies()
 const dashboardExportRef = ref<HTMLElement | null>(null)
 const isExportingPdf = ref(false)
 const mobileMenuOpen = ref(false)
@@ -366,21 +366,7 @@ const adminDisplayName = computed(() => {
 })
 
 onMounted(() => {
-  const accessTokenCookie = useCookie<string | null>('admin_access_token').value
-  const roleCookie = useCookie<string | null>('admin_role').value
-  const nameCookie = useCookie<string | null>('admin_display_name').value
-
-  if (process.client) {
-    if (accessTokenCookie && !localStorage.getItem('admin_access_token')) {
-      localStorage.setItem('admin_access_token', accessTokenCookie)
-    }
-    if (roleCookie && !localStorage.getItem('admin_role')) {
-      localStorage.setItem('admin_role', roleCookie)
-    }
-    if (nameCookie && !localStorage.getItem('admin_display_name')) {
-      localStorage.setItem('admin_display_name', nameCookie)
-    }
-  }
+  hydrateAdminSessionFromStorage()
 })
 
 function logoutAdmin() {

@@ -41,17 +41,26 @@ export default defineNuxtConfig({
     public: {
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
-      /**
-       * Vide par défaut : le client appelle /__nest (même origine, pas de CORS). Définir NUXT_API_BACKEND
-       * sur l’hébergeur du backoffice pour que Nitro proxifie vers Nest.
-       * NUXT_PUBLIC_API_BASE : appels directs navigateur → Nest (ajouter l’origine du backoffice dans CORS_ORIGINS).
-       */
-      apiBase: '',
+      /** Appels directs du navigateur vers l’API Nest (CORS : origines du backoffice sur le backend). */
+      apiBase:
+        process.env.NUXT_PUBLIC_API_BASE ||
+        process.env.NUXT_PUBLIC_API_URL ||
+        (process.env.NODE_ENV === 'development'
+          ? 'http://127.0.0.1:3001'
+          : 'https://milleservice-backend-aacp.onrender.com'),
     }
   },
 
   modules: [
     '@nuxtjs/tailwindcss'
-  ]
+  ],
+
+  /**
+   * Zone admin : pas de SSR (pas de SEO). La session vit dans cookies + localStorage ;
+   * sans cela, un refresh déclenche le middleware serveur sans accès au localStorage → déconnexion.
+   */
+  routeRules: {
+    '/admin/**': { ssr: false },
+  },
 })
 
