@@ -91,10 +91,10 @@
         <h1
           class="hero-title text-4xl font-bold tracking-tight text-white sm:text-5xl"
         >
-          Votre conciergerie<br />Numérique
+          Votre passerelle vers les meilleurs ouvriers <br />et prestataires spécialisés
         </h1>
         <p class="hero-lead mt-6 max-w-xl text-lg text-white/85">
-          Une solution digitale pensée pour simplifier votre quotidien en vous connectant rapidement aux bons prestataires. Notre conciergerie numérique vous accompagne dans la gestion de vos besoins en services, avec efficacité, fiabilité et simplicité.
+          Une solution digitale pensée pour simplifier votre quotidien en vous connectant rapidement aux bons professionnels.<strong> Mille Services </strong>vous accompagne dans la gestion de vos besoins en services, avec efficacité, fiabilité et simplicité.
         </p>
       </div>
     </section>
@@ -605,8 +605,11 @@
           <div class="text-left text-sm">
             <h3 class="text-base font-bold text-white">Adresse</h3>
             <p class="mt-3 leading-relaxed text-white/85">
-              Jln. Galau terus no 23.<br />
-              Jakarta Selatan
+              Cité Keur Gorgui, Dakar SN<br />
+            </p>
+            <h3 class="text-base font-bold text-white">Telephone</h3>
+            <p class="mt-3 leading-relaxed text-white/85">
+              +221 76 644 44 00 <br /> +221 32 824 17 67
             </p>
             <h3 class="mt-8 text-base font-bold text-white">Suivez-nous</h3>
             <div class="mt-4 flex flex-wrap items-center gap-4" aria-label="Réseaux sociaux">

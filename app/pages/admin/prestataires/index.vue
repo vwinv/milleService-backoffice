@@ -182,6 +182,17 @@
                   >
                     Voir
                   </NuxtLink>
+                  <button
+                    type="button"
+                    class="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50 disabled:opacity-45"
+                    title="Supprimer le prestataire"
+                    :disabled="deletingId === p.id"
+                    @click="confirmDelete(p)"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -327,6 +338,7 @@ const serviceFilterDetailsRef = ref<HTMLDetailsElement | null>(null)
 const loadError = ref('')
 const actifToggleError = ref('')
 const togglingPrestataireId = ref<string | null>(null)
+const deletingId = ref<string | null>(null)
 
 const createModalOpen = ref(false)
 const creating = ref(false)
@@ -532,6 +544,25 @@ async function togglePrestataireActif(p: PrestataireItem) {
     actifToggleError.value = extractApiMessage(e) || 'Impossible de modifier le statut actif.'
   } finally {
     togglingPrestataireId.value = null
+  }
+}
+
+async function confirmDelete(p: PrestataireItem) {
+  const ok = window.confirm(
+    `Supprimer définitivement le prestataire « ${p.nom} » et son compte ? Cette action est irréversible.`,
+  )
+  if (!ok) return
+  deletingId.value = p.id
+  try {
+    await fetchAdminApi(`/admin/prestataires/${p.id}`, {}, 'DELETE')
+    await loadPrestataires()
+  } catch (e) {
+    console.error(e)
+    window.alert(
+      'Suppression impossible. Réessayez ou vérifiez les dépendances (prestations, abonnements, etc.).',
+    )
+  } finally {
+    deletingId.value = null
   }
 }
 

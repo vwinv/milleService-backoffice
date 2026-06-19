@@ -33,20 +33,29 @@
         />
       </div>
 
-      <div class="mb-4 flex flex-wrap gap-2">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-for="tab in statutTabs"
+            :key="tab.value"
+            type="button"
+            class="rounded-full px-4 py-2 text-sm font-semibold transition"
+            :class="
+              statutFilter === tab.value
+                ? 'bg-[#020B51] text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            "
+            @click="statutFilter = tab.value"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
         <button
-          v-for="tab in statutTabs"
-          :key="tab.value"
           type="button"
-          class="rounded-full px-4 py-2 text-sm font-semibold transition"
-          :class="
-            statutFilter === tab.value
-              ? 'bg-[#020B51] text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          "
-          @click="statutFilter = tab.value"
+          class="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          @click="openCreateModal"
         >
-          {{ tab.label }}
+          Créer un abonnement
         </button>
       </div>
 
@@ -142,13 +151,71 @@
 
     <Teleport to="body">
       <div
+        v-if="createModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#140C44]/50 p-4 backdrop-blur-md"
+        @click.self="closeCreateModal"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-slate-800">Créer un abonnement</h3>
+          <p class="mt-1 text-sm text-slate-500">Choisissez le prestataire à abonner.</p>
+
+          <input
+            v-model="createPrestataireSearch"
+            type="search"
+            placeholder="Rechercher par nom ou e-mail…"
+            class="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+          />
+
+          <div class="mt-3 max-h-56 overflow-y-auto rounded-xl border border-slate-200">
+            <p v-if="createPrestatairesLoading" class="px-4 py-6 text-center text-sm text-slate-400">
+              Chargement…
+            </p>
+            <p v-else-if="!filteredCreatePrestataires.length" class="px-4 py-6 text-center text-sm text-slate-400">
+              Aucun prestataire trouvé.
+            </p>
+            <button
+              v-for="pr in filteredCreatePrestataires"
+              :key="pr.id"
+              type="button"
+              class="flex w-full flex-col items-start border-b border-slate-100 px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-slate-50"
+              :class="createPrestataireId === pr.id ? 'bg-rose-50' : ''"
+              @click="createPrestataireId = pr.id"
+            >
+              <span class="font-medium text-slate-800">{{ pr.nom }}</span>
+              <span class="text-xs text-slate-500">{{ pr.email || pr.telephone || '—' }}</span>
+            </button>
+          </div>
+
+          <p v-if="createModalError" class="mt-3 text-sm text-rose-600">{{ createModalError }}</p>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              @click="closeCreateModal"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              :disabled="!createPrestataireId"
+              @click="confirmCreatePrestataire"
+            >
+              Continuer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
         v-if="paymentModalOpen"
         class="fixed inset-0 z-50 flex items-center justify-center bg-[#140C44]/50 p-4 backdrop-blur-md"
         @click.self="closePaymentModal"
       >
         <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
           <h3 class="text-lg font-semibold text-slate-800">
-            Renouveler l'abonnement
+            {{ paymentIsCreate ? 'Créer un abonnement' : "Renouveler l'abonnement" }}
           </h3>
           <p v-if="paymentTarget" class="mt-1 text-sm text-slate-500">
             {{ paymentTarget.prestataireNom }}
@@ -269,6 +336,13 @@ type OffreOption = {
   actif: boolean
 }
 
+type PrestataireCreateOption = {
+  id: string
+  nom: string
+  email: string
+  telephone: string
+}
+
 const statutTabs = [
   { value: 'all' as const, label: 'Tous' },
   { value: 'actif' as const, label: 'Actifs' },
@@ -299,6 +373,13 @@ const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
 ]
 
 const offresActives = ref<OffreOption[]>([])
+const createModalOpen = ref(false)
+const createPrestataires = ref<PrestataireCreateOption[]>([])
+const createPrestatairesLoading = ref(false)
+const createPrestataireSearch = ref('')
+const createPrestataireId = ref('')
+const createModalError = ref('')
+const paymentIsCreate = ref(false)
 const paymentModalOpen = ref(false)
 const paymentTarget = ref<AbonnementRow | null>(null)
 const selectedOffreId = ref('')
@@ -339,6 +420,15 @@ watch([statutFilter, debouncedSearch, page], () => {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+
+const filteredCreatePrestataires = computed(() => {
+  const q = createPrestataireSearch.value.trim().toLowerCase()
+  if (!q) return createPrestataires.value
+  return createPrestataires.value.filter((pr) => {
+    const hay = `${pr.nom} ${pr.email} ${pr.telephone}`.toLowerCase()
+    return hay.includes(q)
+  })
+})
 
 onMounted(async () => {
   await Promise.all([loadOffres(), loadAbonnements()])
@@ -426,7 +516,7 @@ function isExpiringSoon(row: AbonnementRow): boolean {
 }
 
 function shouldShowRenew(row: AbonnementRow): boolean {
-  return isExpiringSoon(row)
+  return isExpiringSoon(row) || row.statutAffichage === 'EXPIRE'
 }
 
 function expireDansLabel(row: AbonnementRow): string | null {
@@ -453,6 +543,7 @@ function sleep(ms: number) {
 }
 
 function openPaymentModal(row: AbonnementRow) {
+  paymentIsCreate.value = false
   paymentTarget.value = row
   selectedOffreId.value = row.offreId
   paymentMethod.value = 'cash'
@@ -464,12 +555,86 @@ function openPaymentModal(row: AbonnementRow) {
   paymentModalOpen.value = true
 }
 
+async function loadPrestatairesForCreate() {
+  createPrestatairesLoading.value = true
+  createModalError.value = ''
+  try {
+    const response = await fetchAdminApi<unknown>('/admin/prestataires', {
+      query: { limit: 500 },
+    })
+    const payload = unwrapList<{
+      id: string
+      nom: string
+      email?: string
+      telephone?: string
+      items?: never
+    }>(response)
+    const rows = Array.isArray(payload.items) ? payload.items : []
+    createPrestataires.value = rows.map((row) => ({
+      id: row.id,
+      nom: row.nom,
+      email: row.email ?? '',
+      telephone: row.telephone ?? '',
+    }))
+  } catch (e) {
+    createPrestataires.value = []
+    createModalError.value = extractApiMessage(e, 'Impossible de charger les prestataires.')
+  } finally {
+    createPrestatairesLoading.value = false
+  }
+}
+
+function openCreateModal() {
+  createPrestataireId.value = ''
+  createPrestataireSearch.value = ''
+  createModalError.value = ''
+  createModalOpen.value = true
+  if (!createPrestataires.value.length) {
+    loadPrestatairesForCreate()
+  }
+}
+
+function closeCreateModal() {
+  createModalOpen.value = false
+  createPrestataireId.value = ''
+  createModalError.value = ''
+}
+
+function confirmCreatePrestataire() {
+  const selected = createPrestataires.value.find((pr) => pr.id === createPrestataireId.value)
+  if (!selected) return
+  paymentIsCreate.value = true
+  paymentTarget.value = {
+    id: '',
+    prestataireId: selected.id,
+    prestataireNom: selected.nom,
+    prestataireEmail: selected.email,
+    offreId: '',
+    offreLibelle: '',
+    offrePrix: 0,
+    dureeMois: 0,
+    dateDebut: '',
+    dateFin: '',
+    statutAffichage: 'EXPIRE',
+  }
+  selectedOffreId.value = offresActives.value[0]?.id ?? ''
+  paymentMethod.value = 'cash'
+  paymentPhone.value = selected.telephone.replace(/\s+/g, '')
+  paymentError.value = ''
+  paymentInfo.value = ''
+  paymentWaiting.value = false
+  pendingInvoiceToken.value = ''
+  createModalOpen.value = false
+  paymentModalOpen.value = true
+}
+
 function closePaymentModal() {
   if (paymentSaving.value) return
   pollAborted = true
   paymentWaiting.value = false
   paymentModalOpen.value = false
   paymentTarget.value = null
+  paymentIsCreate.value = false
   paymentInfo.value = ''
   pendingInvoiceToken.value = ''
 }
@@ -509,7 +674,7 @@ async function submitPayment() {
   paymentSaving.value = true
   paymentError.value = ''
   paymentInfo.value = ''
-  actionId.value = paymentTarget.value.id
+  actionId.value = paymentTarget.value.id || paymentTarget.value.prestataireId
   const prestataireId = paymentTarget.value.prestataireId
   try {
     const response = await fetchAdminApi<unknown>(

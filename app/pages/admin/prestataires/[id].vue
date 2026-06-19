@@ -113,7 +113,18 @@
                 ></span>
               </button>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-end">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                :disabled="deletingPrestataire"
+                @click="confirmDeletePrestataire"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {{ deletingPrestataire ? 'Suppression…' : 'Supprimer' }}
+              </button>
               <a
                 v-if="phoneDigits(p.telephone)"
                 :href="telHref(p.telephone!)"
@@ -134,10 +145,49 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </a>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-50"
+                :disabled="abonnementPaymentSaving"
+                @click="openAbonnementModal"
+              >
+                {{ abonnementActionLabel }}
+              </button>
             </div>
           </div>
         </div>
         <p v-if="actifToggleError" class="mt-4 text-sm text-amber-800">{{ actifToggleError }}</p>
+      </section>
+
+      <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
+        <h2 class="mb-4 text-lg font-semibold text-slate-800">Abonnement</h2>
+        <div v-if="p.abonnementCourant" class="grid gap-3 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Offre</p>
+            <p class="mt-1 font-medium text-slate-800">{{ p.abonnementCourant.offreLibelle }}</p>
+            <p class="text-xs text-slate-500">
+              {{ formatMoney(p.abonnementCourant.offrePrix) }} · {{ p.abonnementCourant.dureeMois }} mois
+            </p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Début</p>
+            <p class="mt-1">{{ formatDate(p.abonnementCourant.dateDebut) }}</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Fin prévue</p>
+            <p class="mt-1">{{ formatDate(p.abonnementCourant.dateFin) }}</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase text-slate-500">Statut</p>
+            <span
+              class="mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+              :class="abonnementStatutBadgeClass(p.abonnementCourant.statutAffichage)"
+            >
+              {{ abonnementStatutLabel(p.abonnementCourant.statutAffichage) }}
+            </span>
+          </div>
+        </div>
+        <p v-else class="text-sm text-slate-500">Aucun abonnement enregistré pour ce prestataire.</p>
       </section>
 
       <!-- Wallet + Documents (pas de code promo / bon d'achat) -->
@@ -525,6 +575,97 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="abonnementModalOpen"
+        class="fixed inset-0 z-[10050] flex items-center justify-center bg-[#140C44]/50 p-4 backdrop-blur-md"
+        @click.self="closeAbonnementModal"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-slate-800">
+            {{ p?.abonnementCourant ? "Renouveler l'abonnement" : 'Créer un abonnement' }}
+          </h3>
+          <p v-if="p" class="mt-1 text-sm text-slate-500">{{ p.nom }}</p>
+
+          <div class="mt-4">
+            <label class="mb-2 block text-sm font-medium text-slate-600">Offre</label>
+            <select
+              v-model="abonnementOffreId"
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+            >
+              <option value="" disabled>Choisir une offre</option>
+              <option v-for="o in abonnementOffres" :key="o.id" :value="o.id">
+                {{ o.libelle }} — {{ formatMoney(o.prix) }} ({{ o.dureeMois }} mois)
+              </option>
+            </select>
+          </div>
+
+          <div class="mt-4">
+            <p class="mb-2 text-sm font-medium text-slate-600">Moyen de paiement</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="opt in abonnementPaymentMethods"
+                :key="opt.value"
+                type="button"
+                class="rounded-xl border px-3 py-2.5 text-sm font-semibold transition"
+                :class="
+                  abonnementPaymentMethod === opt.value
+                    ? 'border-rose-600 bg-rose-50 text-rose-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                "
+                @click="abonnementPaymentMethod = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="abonnementPaymentMethod !== 'cash'" class="mt-4">
+            <label class="mb-2 block text-sm font-medium text-slate-600">
+              Téléphone {{ abonnementPaymentMethod === 'wave_sn' ? 'Wave' : 'Orange Money' }}
+            </label>
+            <input
+              v-model="abonnementPaymentPhone"
+              type="tel"
+              class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#020B51]"
+              :placeholder="p?.telephone?.trim() || 'Ex. 771234567'"
+            />
+          </div>
+
+          <p
+            v-if="abonnementPaymentWaiting"
+            class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          >
+            En attente de confirmation du paiement sur le téléphone du prestataire…
+          </p>
+          <p v-if="abonnementPaymentInfo" class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {{ abonnementPaymentInfo }}
+          </p>
+          <p v-if="abonnementPaymentError" class="mt-3 text-sm text-rose-600">{{ abonnementPaymentError }}</p>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              :disabled="abonnementPaymentSaving || abonnementPaymentWaiting"
+              @click="closeAbonnementModal"
+            >
+              {{ abonnementPaymentInfo || abonnementPaymentWaiting ? 'Fermer' : 'Annuler' }}
+            </button>
+            <button
+              v-if="!abonnementPaymentInfo && !abonnementPaymentWaiting"
+              type="button"
+              class="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              :disabled="abonnementPaymentSaving || !canSubmitAbonnement"
+              @click="submitAbonnement"
+            >
+              {{ abonnementPaymentSaving ? 'Traitement…' : abonnementConfirmLabel }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -563,12 +704,35 @@ type PrestataireDetails = {
   walletBalancePlafond?: number | null
   services: Array<{ id: string; libelle: string }>
   documents: PrestataireDocument[]
+  abonnementCourant?: AbonnementCourant | null
 }
+
+type AbonnementCourant = {
+  id: string
+  offreId: string
+  offreLibelle: string
+  offrePrix: number
+  dureeMois: number
+  dateDebut: string
+  dateFin: string
+  statutAffichage: 'ACTIF' | 'EXPIRE' | 'ANNULE'
+}
+
+type AbonnementOffreOption = {
+  id: string
+  libelle: string
+  prix: number
+  dureeMois: number
+  actif: boolean
+}
+
+type AbonnementPaymentMethod = 'cash' | 'wave_sn' | 'orange_money_sn'
 
 const id = computed(() => String(route.params.id || ''))
 
 const loading = ref(true)
 const loadError = ref('')
+const deletingPrestataire = ref(false)
 const p = ref<PrestataireDetails | null>(null)
 const headerAvatarFailed = ref(false)
 const walletBalanceVisible = ref(true)
@@ -604,6 +768,38 @@ const rejectDocumentMotif = ref('')
 const rejectDocumentError = ref('')
 const rejectDocumentSubmitting = ref(false)
 
+const abonnementOffres = ref<AbonnementOffreOption[]>([])
+const abonnementModalOpen = ref(false)
+const abonnementOffreId = ref('')
+const abonnementPaymentMethod = ref<AbonnementPaymentMethod>('cash')
+const abonnementPaymentPhone = ref('')
+const abonnementPaymentSaving = ref(false)
+const abonnementPaymentWaiting = ref(false)
+const abonnementPaymentError = ref('')
+const abonnementPaymentInfo = ref('')
+let abonnementPollAborted = false
+
+const abonnementPaymentMethods: Array<{ value: AbonnementPaymentMethod; label: string }> = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'wave_sn', label: 'Wave' },
+  { value: 'orange_money_sn', label: 'Orange Money' },
+]
+
+const abonnementActionLabel = computed(() =>
+  p.value?.abonnementCourant ? "Renouveler l'abonnement" : 'Créer un abonnement',
+)
+
+const canSubmitAbonnement = computed(() => {
+  if (!abonnementOffreId.value) return false
+  if (abonnementPaymentMethod.value === 'cash') return true
+  const phone = abonnementPaymentPhone.value.replace(/\s+/g, '')
+  return phone.length >= 8
+})
+
+const abonnementConfirmLabel = computed(() =>
+  abonnementPaymentMethod.value === 'cash' ? 'Enregistrer le paiement' : 'Lancer le paiement',
+)
+
 const docActionLoadingId = computed(() => {
   if (validatingDocumentId.value) return validatingDocumentId.value
   if (rejectDocumentSubmitting.value && rejectDocumentTargetId.value) return rejectDocumentTargetId.value
@@ -637,6 +833,7 @@ async function loadDetail() {
       nbAvis: Number(raw.nbAvis ?? 0),
       metier: raw.metier ?? '—',
       documents: raw.documents ?? [],
+      abonnementCourant: raw.abonnementCourant ?? null,
     }
   } catch (e) {
     console.error(e)
@@ -714,6 +911,171 @@ watch(id, () => {
 
 function canActivate(): boolean {
   return p.value?.statutVerification === 'VERIFIE'
+}
+
+async function loadAbonnementOffres() {
+  try {
+    const response = await fetchAdminApi<unknown>('/admin/offres')
+    const payload = unwrapAbonnementList<AbonnementOffreOption>(response)
+    abonnementOffres.value = (payload.items ?? []).filter((o) => o.actif)
+  } catch {
+    abonnementOffres.value = []
+  }
+}
+
+function unwrapAbonnementList<T>(response: unknown): { items?: T[] } {
+  if (!response || typeof response !== 'object') return {}
+  const r = response as Record<string, unknown>
+  const inner = r.data
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    return inner as { items?: T[] }
+  }
+  return r as { items?: T[] }
+}
+
+function unwrapAbonnementPayload(response: unknown): Record<string, unknown> {
+  if (!response || typeof response !== 'object') return {}
+  const r = response as Record<string, unknown>
+  const inner = r.data
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    return inner as Record<string, unknown>
+  }
+  return r
+}
+
+function abonnementSleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function abonnementStatutLabel(s: AbonnementCourant['statutAffichage']) {
+  if (s === 'ACTIF') return 'Actif'
+  if (s === 'ANNULE') return 'Annulé'
+  return 'Expiré'
+}
+
+function abonnementStatutBadgeClass(s: AbonnementCourant['statutAffichage']) {
+  if (s === 'ACTIF') return 'bg-emerald-100 text-emerald-700'
+  if (s === 'ANNULE') return 'bg-slate-100 text-slate-600'
+  return 'bg-amber-100 text-amber-800'
+}
+
+async function openAbonnementModal() {
+  if (!p.value) return
+  abonnementPaymentError.value = ''
+  abonnementPaymentInfo.value = ''
+  abonnementPaymentWaiting.value = false
+  abonnementPaymentMethod.value = 'cash'
+  abonnementPaymentPhone.value = p.value.telephone?.trim() ?? ''
+  abonnementOffreId.value = p.value.abonnementCourant?.offreId ?? ''
+  if (!abonnementOffres.value.length) {
+    await loadAbonnementOffres()
+  }
+  if (!abonnementOffreId.value && abonnementOffres.value[0]) {
+    abonnementOffreId.value = abonnementOffres.value[0].id
+  }
+  abonnementModalOpen.value = true
+}
+
+function closeAbonnementModal() {
+  if (abonnementPaymentSaving.value) return
+  abonnementPollAborted = true
+  abonnementPaymentWaiting.value = false
+  abonnementModalOpen.value = false
+  abonnementPaymentInfo.value = ''
+}
+
+async function pollAbonnementPaydunya(prestataireId: string, invoiceToken: string) {
+  abonnementPollAborted = false
+  abonnementPaymentWaiting.value = true
+  abonnementPaymentError.value = ''
+  try {
+    for (let i = 0; i < 40; i++) {
+      if (abonnementPollAborted) return
+      const response = await fetchAdminApi<unknown>('/admin/abonnements/paydunya-invoice-paid', {
+        query: { prestataireId, invoiceToken },
+      })
+      const payload = unwrapAbonnementPayload(response)
+      if (payload.paid === true) {
+        abonnementPaymentInfo.value =
+          'Paiement confirmé. L’abonnement a été activé pour ce prestataire.'
+        await loadDetail()
+        return
+      }
+      await abonnementSleep(3000)
+    }
+    abonnementPaymentError.value =
+      'Paiement non confirmé. Le prestataire doit valider sur son téléphone, ou réessayez plus tard.'
+  } finally {
+    abonnementPaymentWaiting.value = false
+  }
+}
+
+async function submitAbonnement() {
+  if (!p.value || !canSubmitAbonnement.value || abonnementPaymentSaving.value) return
+  abonnementPaymentSaving.value = true
+  abonnementPaymentError.value = ''
+  abonnementPaymentInfo.value = ''
+  const prestataireId = p.value.id
+  try {
+    const response = await fetchAdminApi<unknown>(
+      `/admin/abonnements/${prestataireId}/enregistrer-paiement`,
+      {
+        body: {
+          offreId: abonnementOffreId.value,
+          method: abonnementPaymentMethod.value,
+          ...(abonnementPaymentMethod.value !== 'cash'
+            ? { telephone: abonnementPaymentPhone.value.replace(/\s+/g, '') }
+            : {}),
+        },
+      },
+      'POST',
+    )
+    const payload = unwrapAbonnementPayload(response)
+    const paymentStatus = String(payload.paymentStatus ?? '')
+
+    if (paymentStatus === 'pending_payment') {
+      const invoiceToken = String(payload.invoiceToken ?? '').trim()
+      if (!invoiceToken) {
+        abonnementPaymentError.value = 'Réponse PayDunya incomplète (token manquant).'
+        return
+      }
+      abonnementPaymentSaving.value = false
+      await pollAbonnementPaydunya(prestataireId, invoiceToken)
+      return
+    }
+
+    if (paymentStatus === 'completed') {
+      abonnementPaymentInfo.value = 'Paiement cash enregistré. Abonnement activé.'
+      await loadDetail()
+      return
+    }
+
+    abonnementPaymentError.value = 'Réponse serveur inattendue.'
+  } catch (e) {
+    abonnementPaymentError.value = extractApiMessage(e) || 'Enregistrement impossible.'
+  } finally {
+    abonnementPaymentSaving.value = false
+  }
+}
+
+async function confirmDeletePrestataire() {
+  if (!p.value || deletingPrestataire.value) return
+  const ok = window.confirm(
+    `Supprimer définitivement le prestataire « ${p.value.nom} » et son compte ? Cette action est irréversible.`,
+  )
+  if (!ok) return
+  deletingPrestataire.value = true
+  try {
+    await fetchAdminApi(`/admin/prestataires/${p.value.id}`, {}, 'DELETE')
+    await navigateTo('/admin/prestataires')
+  } catch (e) {
+    console.error(e)
+    window.alert(
+      'Suppression impossible. Réessayez ou vérifiez les dépendances (prestations, abonnements, etc.).',
+    )
+  } finally {
+    deletingPrestataire.value = false
+  }
 }
 
 async function togglePrestataireActif() {
