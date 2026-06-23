@@ -365,7 +365,11 @@
         v-show="documentsPanelOpen"
         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
       >
-        <h3 class="mb-4 text-base font-semibold text-slate-800">Gestion des documents</h3>
+        <h3 class="mb-2 text-base font-semibold text-slate-800">Gestion des documents</h3>
+        <p class="mb-4 text-sm text-slate-500">
+          Pour valider le profil, seuls le CNI / Passeport (recto) et le CNI / Passeport (verso) sont obligatoires.
+          Le certificat de résidence et le diplôme sont optionnels.
+        </p>
         <div v-if="!p.documents.length" class="text-sm text-slate-500">Aucun document enregistré.</div>
         <div v-else class="space-y-2">
           <article
@@ -374,7 +378,15 @@
             class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-3"
           >
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-slate-800">{{ doc.typeLibelle }}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="truncate text-sm font-semibold text-slate-800">{{ doc.typeLibelle }}</p>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  :class="doc.obligatoire ? 'bg-[#020B51]/10 text-[#020B51]' : 'bg-slate-100 text-slate-500'"
+                >
+                  {{ doc.obligatoire ? 'Obligatoire' : 'Optionnel' }}
+                </span>
+              </div>
               <p class="truncate text-xs text-slate-500">{{ doc.nomFichier || doc.fichierUrl }}</p>
               <button
                 type="button"
