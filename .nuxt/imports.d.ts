@@ -32,4 +32,3 @@ export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composab
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { useAdminFetch } from '../app/composables/useAdminFetch';
 export { ADMIN_SESSION_MAX_AGE_SEC, useAdminSessionCookies, hydrateAdminSessionFromStorage, getAdminAccessToken, isAdminAuthenticated, setAdminSession, clearAdminSession } from '../app/composables/useAdminSession';
-export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';
