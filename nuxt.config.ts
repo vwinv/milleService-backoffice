@@ -58,9 +58,18 @@ export default defineNuxtConfig({
   /**
    * Zone admin : pas de SSR (pas de SEO). La session vit dans cookies + localStorage ;
    * sans cela, un refresh déclenche le middleware serveur sans accès au localStorage → déconnexion.
+   * prerender: false → les routes dynamiques (/admin/prestataires/:id) ne sont pas figées en HTML statique.
    */
   routeRules: {
-    '/admin/**': { ssr: false },
+    '/admin/**': { ssr: false, prerender: false },
+  },
+
+  nitro: {
+    /**
+     * Serveur Node en production : refresh sur routes dynamiques admin + route API /api/document-preview.
+     * Pour un déploiement statique volontaire : NITRO_PRESET=static + fichier public/_redirects.
+     */
+    preset: process.env.NITRO_PRESET || 'node-server',
   },
 })
 

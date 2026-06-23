@@ -100,12 +100,29 @@
             {{ editingId ? "Modifier l'offre" : 'Nouvelle offre' }}
           </h3>
           <div class="mt-4 grid gap-3">
-            <input v-model="form.libelle" type="text" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Libellé" />
-            <input v-model="form.prix" type="number" min="0" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Prix (XOF)" />
-            <input v-model="form.dureeMois" type="number" min="1" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Durée (mois)" />
+            <input v-model="form.libelle" type="text" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Libellé *" />
+            <input
+              v-model="form.prix"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none"
+              placeholder="Prix (XOF) * — 0 pour une offre gratuite"
+            />
+            <input
+              v-model="form.dureeMois"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none"
+              placeholder="Durée (mois) *"
+            />
             <input v-model="form.code" type="text" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Code (optionnel)" />
             <textarea v-model="form.description" rows="3" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Description (optionnel)" />
           </div>
+          <p v-if="modalError" class="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {{ modalError }}
+          </p>
           <div class="mt-6 flex justify-end gap-2">
             <button type="button" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100" @click="closeModal">
               Annuler
@@ -113,7 +130,7 @@
             <button
               type="button"
               class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="saving || !form.libelle.trim() || !form.prix || !form.dureeMois"
+              :disabled="saving"
               @click="submitModal"
             >
               {{ saving ? 'Enregistrement…' : editingId ? 'Mettre à jour' : 'Enregistrer' }}
@@ -145,6 +162,7 @@ const loading = ref(true)
 const errorMsg = ref('')
 const togglingId = ref<string | null>(null)
 const modalOpen = ref(false)
+const modalError = ref('')
 const saving = ref(false)
 const editingId = ref<string | null>(null)
 const form = reactive({
@@ -160,6 +178,45 @@ const stats = computed(() => ({
   actifs: items.value.filter((o) => o.actif).length,
   inactifs: items.value.filter((o) => !o.actif).length,
 }))
+
+function normalizeNumericInput(raw: string): string {
+  return raw.trim().replace(/\u00a0/g, '').replace(/\u202f/g, '').replace(/\s/g, '')
+}
+
+function parseOffrePrix(raw: string): number | null {
+  const normalized = normalizeNumericInput(raw).replace(',', '.')
+  if (normalized === '') return null
+  const prix = Number(normalized)
+  if (!Number.isFinite(prix) || prix < 0) return null
+  return prix
+}
+
+function parseOffreDuree(raw: string): number | null {
+  const normalized = normalizeNumericInput(raw)
+  if (normalized === '') return null
+  const duree = Number(normalized)
+  if (!Number.isInteger(duree) || duree <= 0) return null
+  return duree
+}
+
+function validateOffreForm(): { prix: number; dureeMois: number } | null {
+  const libelle = form.libelle.trim()
+  if (!libelle) {
+    modalError.value = 'Libellé requis.'
+    return null
+  }
+  const prix = parseOffrePrix(form.prix)
+  if (prix === null) {
+    modalError.value = 'Prix invalide (0 autorisé pour une offre gratuite).'
+    return null
+  }
+  const dureeMois = parseOffreDuree(form.dureeMois)
+  if (dureeMois === null) {
+    modalError.value = 'Durée invalide (nombre entier de mois, minimum 1).'
+    return null
+  }
+  return { prix, dureeMois }
+}
 
 onMounted(() => {
   loadOffres()
@@ -202,6 +259,7 @@ async function loadOffres() {
 
 function openCreateModal() {
   editingId.value = null
+  modalError.value = ''
   form.code = ''
   form.libelle = ''
   form.description = ''
@@ -212,6 +270,7 @@ function openCreateModal() {
 
 function openEditModal(row: OffreRow) {
   editingId.value = row.id
+  modalError.value = ''
   form.code = row.code
   form.libelle = row.libelle
   form.description = row.description || ''
@@ -227,6 +286,9 @@ function closeModal() {
 
 async function submitCreate() {
   if (saving.value) return
+  modalError.value = ''
+  const parsed = validateOffreForm()
+  if (!parsed) return
   saving.value = true
   errorMsg.value = ''
   try {
@@ -235,20 +297,21 @@ async function submitCreate() {
         code: form.code.trim() || undefined,
         libelle: form.libelle.trim(),
         description: form.description.trim() || undefined,
-        prix: Number(form.prix),
-        dureeMois: Number(form.dureeMois),
+        prix: parsed.prix,
+        dureeMois: parsed.dureeMois,
       },
     }, 'POST')
     modalOpen.value = false
     await loadOffres()
   } catch (e) {
-    errorMsg.value = extractApiMessage(e, 'Création impossible.')
+    modalError.value = extractApiMessage(e, 'Création impossible.')
   } finally {
     saving.value = false
   }
 }
 
 async function submitModal() {
+  if (saving.value) return
   if (editingId.value) {
     await submitEdit()
     return
@@ -258,6 +321,9 @@ async function submitModal() {
 
 async function submitEdit() {
   if (saving.value || !editingId.value) return
+  modalError.value = ''
+  const parsed = validateOffreForm()
+  if (!parsed) return
   saving.value = true
   errorMsg.value = ''
   try {
@@ -266,15 +332,15 @@ async function submitEdit() {
         code: form.code.trim() || undefined,
         libelle: form.libelle.trim(),
         description: form.description.trim() || undefined,
-        prix: Number(form.prix),
-        dureeMois: Number(form.dureeMois),
+        prix: parsed.prix,
+        dureeMois: parsed.dureeMois,
       },
     }, 'PATCH')
     modalOpen.value = false
     editingId.value = null
     await loadOffres()
   } catch (e) {
-    errorMsg.value = extractApiMessage(e, 'Mise à jour impossible.')
+    modalError.value = extractApiMessage(e, 'Mise à jour impossible.')
   } finally {
     saving.value = false
   }

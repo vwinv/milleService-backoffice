@@ -153,7 +153,9 @@
           class="app-section-cta mt-8 flex w-full max-w-md flex-col gap-3 sm:mt-10 sm:flex-row sm:justify-center sm:gap-4"
         >
           <a
-            href="#"
+            href="https://apps.apple.com/us/app/mille-services/id6760831174"
+            target="_blank"
+            rel="noopener noreferrer"
             class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-full bg-[#020B51] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#031a6b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#020B51] focus-visible:ring-offset-2 sm:flex-initial sm:min-w-[220px]"
           >
             Télécharger sur l’App Store

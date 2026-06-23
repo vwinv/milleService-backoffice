@@ -1,0 +1,3 @@
+# Fallback SPA (Netlify / Render / Cloudflare Pages) — toutes les routes côté client
+/admin/*    /200.html   200
+/*          /200.html   200

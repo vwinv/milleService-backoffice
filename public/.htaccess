@@ -1,0 +1,14 @@
+# Fallback SPA : routes admin (/admin/offres, /admin/prestataires/:id, etc.)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Fichiers réels (JS, CSS, images)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Admin + app Nuxt côté client
+  RewriteRule ^admin(/.*)?$ /200.html [L]
+  RewriteRule . /200.html [L]
+</IfModule>
