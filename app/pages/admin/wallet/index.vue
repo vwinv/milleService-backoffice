@@ -246,8 +246,8 @@
             </div>
 
             <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-snug text-slate-700">
-              <span class="font-semibold text-slate-900">Envoi via PayDunya obligatoire</span>
-              (débit du compte marchand PayDunya). « Carte bancaire » n'est pas disponible dans ce flux.
+              <span class="font-semibold text-slate-900">Envoi via SamirPay obligatoire</span>
+              (versement mobile money). « Carte bancaire » n'est pas disponible dans ce flux.
             </div>
 
             <div>
@@ -263,8 +263,8 @@
             </div>
 
             <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
-              Envoi immédiat via PayDunya PUSH ; le solde Mille Services est débité après confirmation
-              PayDunya (sinon erreur, sans débit).
+              Envoi immédiat via SamirPay ; le solde Mille Services est débité après confirmation
+              SamirPay (sinon erreur, sans débit).
             </p>
           </div>
 
@@ -385,7 +385,7 @@ async function submitRetraitModal() {
     return
   }
   if (!accountAliasStr.value.trim()) {
-    window.alert('Indiquez le téléphone du bénéficiaire (obligatoire via PayDunya).')
+    window.alert('Indiquez le téléphone du bénéficiaire (obligatoire via SamirPay).')
     return
   }
   retraitSubmitting.value = true

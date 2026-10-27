@@ -32,22 +32,18 @@ export default defineNuxtConfig({
      *   NUXT_API_BACKEND=https://votre-api.onrender.com
      */
     apiBackend:
-      process.env.NUXT_API_BACKEND ||
-      process.env.NUXT_PUBLIC_API_BASE ||
-      process.env.NUXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === 'development'
-        ? 'http://127.0.0.1:3001'
-        : 'https://milleservice-backend-aacp.onrender.com'),
+      // 'http://127.0.0.1:3001',
+      'https://milleservice-backend-aacp.onrender.com',
     public: {
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */
       siteUrl: 'https://mille-services.com',
       /** Appels directs du navigateur vers l’API Nest (CORS : origines du backoffice sur le backend). */
       apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ||
-        process.env.NUXT_PUBLIC_API_URL ||
-        (process.env.NODE_ENV === 'development'
-          ? 'http://127.0.0.1:3001'
-          : 'https://milleservice-backend-aacp.onrender.com'),
+        //  'http://127.0.0.1:3001',
+        'https://milleservice-backend-aacp.onrender.com',
+      /** APK Android pour les testeurs (déposer le fichier dans public/downloads/). */
+      apkDownloadUrl:
+        process.env.NUXT_PUBLIC_APK_DOWNLOAD_URL || '/downloads/milleservices.apk',
     }
   },
 

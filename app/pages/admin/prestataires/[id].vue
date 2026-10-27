@@ -1048,7 +1048,7 @@ async function submitAbonnement() {
     if (paymentStatus === 'pending_payment') {
       const invoiceToken = String(payload.invoiceToken ?? '').trim()
       if (!invoiceToken) {
-        abonnementPaymentError.value = 'Réponse PayDunya incomplète (token manquant).'
+        abonnementPaymentError.value = 'Réponse SamirPay incomplète (token manquant).'
         return
       }
       abonnementPaymentSaving.value = false

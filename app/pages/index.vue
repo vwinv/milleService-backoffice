@@ -39,12 +39,13 @@
             </NuxtLink>
           </nav>
 
-          <a
-            href="#"
+          <button
+            type="button"
             class="inline-flex items-center justify-center rounded-full bg-[#020B51] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#031a6b] sm:px-5 sm:text-sm md:text-base"
+            @click="scrollToTelechargerApp"
           >
             Télécharger l’application
-          </a>
+          </button>
         </div>
       </div>
     </header>
@@ -133,7 +134,9 @@
       :class="{ 'app-section-block--visible': appSectionVisible }"
     >
     <section
-      class="border-b border-slate-100 bg-white px-4 py-12 sm:py-16"
+      id="telecharger-app"
+      ref="telechargerAppRef"
+      class="scroll-mt-24 border-b border-slate-100 bg-white px-4 py-12 sm:py-16"
       aria-labelledby="app-download-heading"
     >
       <div class="mx-auto flex max-w-6xl flex-col items-center text-center">
@@ -160,9 +163,11 @@
           >
             Télécharger sur l’App Store
           </a>
-          <a
-            href="#"
+           <a
+           target="_blank"
+           rel="noopener noreferrer"
             class="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-full border-2 border-[#020B51] bg-white px-6 py-3 text-sm font-semibold text-[#020B51] transition hover:bg-[#020B51]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#020B51]/40 focus-visible:ring-offset-2 sm:flex-initial sm:min-w-[220px]"
+            href="https://play.google.com/store/apps/details?id=com.mille.services"
           >
             Télécharger sur le Play Store
           </a>
@@ -717,12 +722,43 @@
         </div>
       </div>
     </footer>
+
+   
   </div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const config = useRuntimeConfig()
+
+const telechargerAppRef = ref<HTMLElement | null>(null)
+
+function scrollToTelechargerApp() {
+  if (typeof window === 'undefined') return
+  const el = telechargerAppRef.value ?? document.getElementById('telecharger-app')
+  if (!el) return
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  el.scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start',
+  })
+  if (route.hash !== '#telecharger-app') {
+    history.replaceState(null, '', '#telecharger-app')
+  }
+}
+
+function scrollToHashTarget(hash: string) {
+  if (hash !== '#telecharger-app') return
+  nextTick(() => {
+    requestAnimationFrame(() => scrollToTelechargerApp())
+  })
+}
+
+const apkDownloadUrl = computed(
+  () => (config.public.apkDownloadUrl as string) || '/downloads/milleservices.apk',
+)
+
+
 
 /** FAQ (contenu éditorial) */
 const faqItems = [
@@ -955,6 +991,8 @@ function resetApp1SectionEntrance() {
 let app1SectionIo: IntersectionObserver | null = null
 
 onMounted(() => {
+  scrollToHashTarget(route.hash)
+
   heroSliderTimer = setInterval(() => {
     currentHeroSlide.value = (currentHeroSlide.value + 1) % heroSlides.length
   }, 6000)
@@ -1046,6 +1084,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
   if (heroSliderTimer) clearInterval(heroSliderTimer)
   if (avisCarouselTimer) clearInterval(avisCarouselTimer)
   heroIo?.disconnect()
@@ -1072,6 +1113,11 @@ function navLinkClass(active: boolean) {
     active ? 'font-semibold text-[#020B51]' : 'text-[#727272] hover:text-[#020B51]',
   ]
 }
+
+watch(
+  () => route.hash,
+  (hash) => scrollToHashTarget(hash),
+)
 
 useHead({
   title: 'Mille Services — Accueil',

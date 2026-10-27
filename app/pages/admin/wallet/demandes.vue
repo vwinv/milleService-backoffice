@@ -208,8 +208,8 @@
                 :disabled="selectedPayout === 'RIB'"
               />
               <span class="text-sm leading-snug text-slate-700">
-                <span class="font-semibold text-slate-900">Envoyer via PayDunya</span>
-                (débit du compte marchand PayDunya, API PUSH). Incompatible avec « Carte bancaire ».
+                <span class="font-semibold text-slate-900">Envoyer via SamirPay</span>
+                (versement mobile money SamirPay). Incompatible avec « Carte bancaire ».
               </span>
             </label>
 
@@ -230,7 +230,7 @@
 
             <p class="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
               <template v-if="payWithPaydunya">
-                PayDunya envoie les fonds sur le mobile money choisi, puis le wallet prestataire est débité
+                SamirPay envoie les fonds sur le mobile money choisi, puis le wallet prestataire est débité
                 (ou la demande reste en attente si l’opérateur confirme plus tard).
               </template>
               <template v-else>
@@ -442,7 +442,7 @@ async function submitPaymentModal() {
   const row = paymentRow.value
   if (!row || paymentSubmitting.value) return
   if (payWithPaydunya.value && selectedPayout.value === 'RIB') {
-    actionError.value = 'PayDunya ne prend pas en charge le RIB / carte bancaire.'
+    actionError.value = 'SamirPay ne prend pas en charge le RIB / carte bancaire.'
     return
   }
   paymentSubmitting.value = true

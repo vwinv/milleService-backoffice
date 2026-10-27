@@ -276,7 +276,7 @@
           >
             En attente de confirmation du paiement sur le téléphone du prestataire…
             <span class="mt-1 block text-xs text-amber-700">
-              L’abonnement ne sera activé qu’après validation PayDunya.
+              L’abonnement ne sera activé qu’après validation SamirPay.
             </span>
           </p>
           <p v-if="paymentInfo" class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -696,7 +696,7 @@ async function submitPayment() {
     if (paymentStatus === 'pending_payment') {
       const invoiceToken = String(payload.invoiceToken ?? '').trim()
       if (!invoiceToken) {
-        paymentError.value = 'Réponse PayDunya incomplète (token manquant).'
+        paymentError.value = 'Réponse SamirPay incomplète (token manquant).'
         return
       }
       pendingInvoiceToken.value = invoiceToken
