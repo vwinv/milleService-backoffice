@@ -652,12 +652,12 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "siteUrl": "http://127.0.0.1:3001",
-    "apiBase": "http://127.0.0.1:3001",
+    "siteUrl": "https://mille-services.com",
+    "apiBase": "https://milleservice-backend-aacp.onrender.com",
     "apkDownloadUrl": "/downloads/milleservices.apk"
   },
   "openaiApiKey": "",
-  "apiBackend": "http://127.0.0.1:3001"
+  "apiBackend": "https://milleservice-backend-aacp.onrender.com"
 };
 const envOptions = {
   prefix: "NITRO_",

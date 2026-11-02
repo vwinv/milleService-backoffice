@@ -32,7 +32,7 @@ export default defineNuxtConfig({
      *   NUXT_API_BACKEND=https://votre-api.onrender.com
      */
     apiBackend:
-      // 'http://127.0.0.1:3001',
+      //'http://127.0.0.1:3001',
       'https://milleservice-backend-aacp.onrender.com',
     public: {
       /** Canonique ; l’API autorise aussi https://www.mille-services.com (CORS). */

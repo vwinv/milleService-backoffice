@@ -164,6 +164,7 @@
             <tr>
               <th class="px-4 py-3 font-medium">Date d'ajout</th>
               <th class="px-4 py-3 font-medium">Métiers</th>
+              <th class="px-4 py-3 font-medium">Icône</th>
               <th class="px-4 py-3 font-medium">Tarif</th>
               <th class="px-4 py-3 font-medium">Statut</th>
               <th class="px-4 py-3 font-medium text-right"></th>
@@ -171,10 +172,10 @@
           </thead>
           <tbody class="divide-y divide-slate-200 text-slate-700">
             <tr v-if="loading">
-              <td colspan="5" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
             <tr v-else-if="!paginatedRows.length">
-              <td colspan="5" class="px-4 py-8 text-center text-slate-400">
+              <td colspan="6" class="px-4 py-8 text-center text-slate-400">
                 <template v-if="items.length && !filteredTotal">
                   Aucun résultat pour ce filtre ({{ items.length }} service(s) en base ont un autre statut).
                   Onglet « Tous » pour tout afficher.
@@ -187,6 +188,15 @@
             <tr v-for="row in paginatedRows" :key="row.id">
               <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ formatDate(row.createdAt) }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ row.libelle }}</td>
+              <td class="px-4 py-3">
+                <img
+                  v-if="row.icone"
+                  :src="row.icone"
+                  :alt="row.libelle"
+                  class="h-8 w-8 object-contain"
+                />
+                <span v-else class="text-slate-400">—</span>
+              </td>
               <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ formatMoney(row.tarif) }}</td>
               <td class="px-4 py-3">
                 <button
@@ -267,6 +277,40 @@
             placeholder="Ex. 5000"
             @keydown.enter.prevent="submitModal"
           />
+          <label class="mt-4 block text-sm font-medium text-slate-700">Icône</label>
+          <p class="mt-1 text-xs leading-relaxed text-slate-500">
+            PNG à fond transparent. Couleur à respecter :
+            <span class="font-semibold text-[#020B51]">#020B51</span>
+            <span
+              class="ml-1 inline-block h-3 w-3 rounded-sm align-middle"
+              style="background-color: #020b51"
+              aria-hidden="true"
+            />
+          </p>
+          <div class="mt-2 flex items-center gap-3">
+            <img
+              v-if="modalIcone"
+              :src="modalIcone"
+              alt="Aperçu de l'icône"
+              class="h-12 w-12 rounded-lg border border-slate-200 object-contain p-1"
+            />
+            <input
+              type="file"
+              accept="image/png,image/webp"
+              class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-[#020B51] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              :disabled="modalSaving || iconUploading"
+              @change="onIconSelected"
+            />
+          </div>
+          <button
+            v-if="modalIcone"
+            type="button"
+            class="mt-2 text-xs font-medium text-rose-700 hover:underline"
+            :disabled="modalSaving"
+            @click="modalIcone = ''"
+          >
+            Retirer l'icône
+          </button>
           <p v-if="modalError" class="mt-2 text-sm text-rose-700">{{ modalError }}</p>
           <div class="mt-6 flex justify-end gap-2">
             <button
@@ -279,7 +323,7 @@
             <button
               type="button"
               class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="modalSaving || !modalLibelle.trim() || !modalTarif.trim()"
+              :disabled="modalSaving || iconUploading || !modalLibelle.trim() || !modalTarif.trim()"
               @click="submitModal"
             >
               {{ modalSaving ? 'Enregistrement…' : 'Enregistrer' }}
@@ -330,6 +374,7 @@ type ServiceRow = {
   id: string
   libelle: string
   slug: string
+  icone: string | null
   tarif: number | null
   actif: boolean
   createdAt: string
@@ -370,6 +415,8 @@ const modalMode = ref<'create' | 'edit'>('create')
 const modalServiceId = ref<string | null>(null)
 const modalLibelle = ref('')
 const modalTarif = ref<string>('')
+const modalIcone = ref('')
+const iconUploading = ref(false)
 const modalError = ref('')
 const modalSaving = ref(false)
 
@@ -472,6 +519,7 @@ function openCreateModal() {
   modalServiceId.value = null
   modalLibelle.value = ''
   modalTarif.value = ''
+  modalIcone.value = ''
   modalOpen.value = true
 }
 
@@ -482,6 +530,7 @@ function openEditModal(row: ServiceRow) {
   modalServiceId.value = row.id
   modalLibelle.value = row.libelle
   modalTarif.value = row.tarif != null ? String(row.tarif) : ''
+  modalIcone.value = row.icone ?? ''
   modalOpen.value = true
 }
 
@@ -492,7 +541,41 @@ function closeModal() {
   modalServiceId.value = null
   modalLibelle.value = ''
   modalTarif.value = ''
+  modalIcone.value = ''
   modalError.value = ''
+}
+
+function unwrapUploadUrl(response: unknown): string {
+  if (!response || typeof response !== 'object') return ''
+  const r = response as Record<string, unknown>
+  const inner = r.data && typeof r.data === 'object' ? (r.data as Record<string, unknown>) : r
+  const url = inner.url
+  return typeof url === 'string' ? url.trim() : ''
+}
+
+async function onIconSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || iconUploading.value) return
+  modalError.value = ''
+  iconUploading.value = true
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetchAdminApi<unknown>('/documents/upload', { body: form }, 'POST')
+    const url = unwrapUploadUrl(response)
+    if (!url) {
+      modalError.value = "L'envoi de l'icône n'a pas renvoyé d'adresse."
+      return
+    }
+    modalIcone.value = url
+  } catch (e) {
+    console.error(e)
+    modalError.value = extractApiMessage(e, "Impossible d'envoyer l'icône.")
+  } finally {
+    iconUploading.value = false
+  }
 }
 
 async function submitModal() {
@@ -514,7 +597,7 @@ async function submitModal() {
     if (modalMode.value === 'create') {
       await fetchAdminApi(
         '/admin/services',
-        { body: { libelle, tarif: parsedTarif } },
+        { body: { libelle, tarif: parsedTarif, icone: modalIcone.value.trim() || null } },
         'POST',
       )
     } else {
@@ -524,7 +607,7 @@ async function submitModal() {
       }
       await fetchAdminApi(
         `/admin/services/${modalServiceId.value}`,
-        { body: { libelle, tarif: parsedTarif } },
+        { body: { libelle, tarif: parsedTarif, icone: modalIcone.value.trim() || null } },
         'PATCH',
       )
     }
@@ -533,6 +616,7 @@ async function submitModal() {
     modalServiceId.value = null
     modalLibelle.value = ''
     modalTarif.value = ''
+    modalIcone.value = ''
     modalError.value = ''
     await loadServices()
   } catch (e) {
