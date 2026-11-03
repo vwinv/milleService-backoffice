@@ -131,31 +131,9 @@
 
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-xl font-semibold text-slate-800">Métiers</h2>
-        <div class="flex items-center gap-2 text-sm text-slate-600">
-          <span class="font-medium">{{ pageSize }} pour {{ filteredTotal }}</span>
-          <button
-            type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="currentPage <= 1 || loading"
-            aria-label="Page précédente"
-            @click="currentPage -= 1"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="currentPage >= totalPages || loading"
-            aria-label="Page suivante"
-            @click="currentPage += 1"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" />
-            </svg>
-          </button>
-        </div>
+        <p class="text-sm text-slate-600">
+          <span class="font-medium">{{ pageSize }}</span> par page · {{ listTotal }} résultat(s)
+        </p>
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -174,18 +152,17 @@
             <tr v-if="loading">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
-            <tr v-else-if="!paginatedRows.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">
-                <template v-if="items.length && !filteredTotal">
-                  Aucun résultat pour ce filtre ({{ items.length }} service(s) en base ont un autre statut).
-                  Onglet « Tous » pour tout afficher.
+                <template v-if="items.length && !listTotal">
+                  Aucun résultat pour cette recherche ou ce filtre.
                 </template>
                 <template v-else>
                   Aucun service à afficher.
                 </template>
               </td>
             </tr>
-            <tr v-for="row in paginatedRows" :key="row.id">
+            <tr v-for="row in pageItems" :key="row.id">
               <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ formatDate(row.createdAt) }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ row.libelle }}</td>
               <td class="px-4 py-3">
@@ -245,6 +222,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -400,8 +384,6 @@ const loading = ref(true)
 const loadError = ref('')
 const actionError = ref('')
 const activeTab = ref<'tous' | 'actifs' | 'inactifs'>('tous')
-const pageSize = 10
-const currentPage = ref(1)
 
 const togglingId = ref<string | null>(null)
 const deactivatingId = ref<string | null>(null)
@@ -429,29 +411,24 @@ const stats = computed(() => {
   }
 })
 
-const filteredRows = computed(() => {
+const tabRows = computed(() => {
   const list = items.value
   if (activeTab.value === 'tous') return list
   if (activeTab.value === 'actifs') return list.filter((s) => s.actif)
   return list.filter((s) => !s.actif)
 })
 
-const filteredTotal = computed(() => filteredRows.value.length)
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredTotal.value / pageSize)))
-
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
-})
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(tabRows)
 
 watch(activeTab, () => {
-  currentPage.value = 1
-})
-
-watch(filteredTotal, (n) => {
-  const max = Math.max(1, Math.ceil(n / pageSize))
-  if (currentPage.value > max) currentPage.value = max
+  page.value = 1
 })
 
 onMounted(() => {

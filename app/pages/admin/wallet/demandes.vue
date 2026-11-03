@@ -59,33 +59,8 @@
         {{ actionError }}
       </div>
 
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="mb-4">
         <h2 class="text-xl font-semibold text-slate-800">Demandes de retraits</h2>
-        <div class="flex items-center gap-2 text-sm text-slate-600">
-          <span class="font-medium">{{ pageSize }} pour {{ listTotal }}</span>
-          <button
-            type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="currentPage <= 1 || loading"
-            aria-label="Page précédente"
-            @click="currentPage -= 1"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="currentPage >= totalPages || loading"
-            aria-label="Page suivante"
-            @click="currentPage += 1"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -104,10 +79,10 @@
             <tr v-if="loading">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
-            <tr v-else-if="!rows.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Aucune demande de retrait.</td>
             </tr>
-            <tr v-for="row in rows" :key="row.id">
+            <tr v-for="row in pageItems" :key="row.id">
               <td class="whitespace-nowrap px-4 py-3">{{ formatDate(row.date) }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ row.prestataireNom }}</td>
               <td class="px-4 py-3">{{ row.montant == null ? '—' : formatFcfa(row.montant) }}</td>
@@ -141,6 +116,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -326,7 +308,6 @@ const summary = reactive<WalletSummary>({
 })
 
 const rows = ref<WithdrawalRow[]>([])
-const listTotal = ref(0)
 const loading = ref(true)
 const loadError = ref('')
 const actionError = ref('')
@@ -354,14 +335,14 @@ const payoutOptions: { value: PayoutMethod; label: string; class: string }[] = [
   },
 ]
 
-const pageSize = 14
-const currentPage = ref(1)
-
-const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / pageSize)))
-
-watch(currentPage, () => {
-  loadRequests()
-})
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(rows)
 
 onMounted(async () => {
   await loadSummary()
@@ -388,12 +369,10 @@ async function loadRequests() {
   loading.value = true
   loadError.value = ''
   try {
-    const offset = (currentPage.value - 1) * pageSize
     const response = await fetchAdminApi<unknown>('/admin/wallet/withdrawal-requests', {
-      query: { limit: pageSize, offset },
+      query: { limit: 1000, offset: 0 },
     })
     const payload = unwrapApi<{ total?: number; items?: WithdrawalRow[] }>(response)
-    listTotal.value = payload?.total ?? 0
     const items = Array.isArray(payload?.items) ? payload.items : []
     rows.value = items.map((it) => ({
       ...it,
@@ -403,7 +382,6 @@ async function loadRequests() {
   } catch (e) {
     console.error(e)
     rows.value = []
-    listTotal.value = 0
     loadError.value = extractApiMessage(e, 'Impossible de charger les demandes.')
   } finally {
     loading.value = false
@@ -517,11 +495,6 @@ function formatDate(value: string) {
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
-
-watch(listTotal, (n) => {
-  const max = Math.max(1, Math.ceil(n / pageSize))
-  if (currentPage.value > max) currentPage.value = max
-})
 
 useHead({
   title: 'Demandes de retraits',

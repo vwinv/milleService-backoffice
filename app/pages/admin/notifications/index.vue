@@ -37,72 +37,16 @@
         </div>
       </div>
 
-      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <label class="relative block w-full min-w-[220px] max-w-md">
-          <span class="sr-only">Rechercher</span>
+      <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+        <label class="text-sm text-slate-600">
+          <span class="sr-only">Type</span>
           <input
-            v-model="searchInput"
-            type="search"
-            placeholder="Rechercher par titre, type ou e-mail…"
-            class="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 pl-10 text-sm text-slate-800 outline-none focus:border-[#020B51]/30"
+            v-model="typeFilter"
+            type="text"
+            placeholder="Type (optionnel)"
+            class="w-56 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-[#020B51]/30"
           />
-          <span
-            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          >
-            <svg
-              class="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path stroke-linecap="round" d="m20 20-3.5-3.5" />
-            </svg>
-          </span>
         </label>
-
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <label class="text-sm text-slate-600">
-            <span class="sr-only">Type</span>
-            <input
-              v-model="typeFilter"
-              type="text"
-              placeholder="Type (optionnel)"
-              class="w-56 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-[#020B51]/30"
-            />
-          </label>
-
-          <span class="text-sm text-slate-600">
-            <template v-if="listTotal > 0">
-              {{ pageFirst }}-{{ pageLast }} sur {{ formatInt(listTotal) }}
-            </template>
-            <template v-else>Aucune notification</template>
-          </span>
-          <button
-            type="button"
-            class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            :disabled="page <= 0 || loading"
-            aria-label="Page précédente"
-            @click="goPage(page - 1)"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            :disabled="page >= totalPages - 1 || loading"
-            aria-label="Page suivante"
-            @click="goPage(page + 1)"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       <div
@@ -136,12 +80,12 @@
                 Chargement…
               </td>
             </tr>
-            <tr v-else-if="!notifications.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="5" class="px-4 py-8 text-center text-slate-400">
                 Aucune notification.
               </td>
             </tr>
-            <tr v-for="n in notifications" :key="n.id">
+            <tr v-for="n in pageItems" :key="n.id">
               <td class="whitespace-nowrap px-4 py-3">{{ formatDate(n.createdAt) }}</td>
               <td class="px-4 py-3">
                 <div class="flex flex-wrap items-center gap-2">
@@ -171,6 +115,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
   </div>
@@ -476,9 +427,6 @@ function extractApiMessage(err: unknown, fallback: string): string {
 }
 
 const notifications = ref<AdminNotification[]>([])
-const listTotal = ref(0)
-const page = ref(0)
-const pageSize = 14
 const loading = ref(false)
 const loadError = ref('')
 /** Message après envoi réussi (push côté mobile = autre sujet : FCM sur le backend). */
@@ -487,6 +435,36 @@ const sendSuccess = ref('')
 const audience = ref<'TOUT' | 'PARTICULIER' | 'PRESTATAIRE'>('TOUT')
 const unreadOnly = ref(false)
 const typeFilter = ref('')
+
+const filteredNotifications = computed(() => {
+  let list = notifications.value
+  if (audience.value === 'PARTICULIER') {
+    list = list.filter((n) => n.userRole === 'PARTICULIER')
+  } else if (audience.value === 'PRESTATAIRE') {
+    list = list.filter((n) => n.userRole === 'PRESTATAIRE')
+  }
+  if (unreadOnly.value) {
+    list = list.filter((n) => !n.lu)
+  }
+  const typeQ = typeFilter.value.trim().toLowerCase()
+  if (typeQ) {
+    list = list.filter((n) => (n.type ?? '').toLowerCase().includes(typeQ))
+  }
+  return list
+})
+
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(filteredNotifications)
+
+watch([audience, unreadOnly, typeFilter], () => {
+  page.value = 1
+})
 
 // =========================
 // Création notification ciblée (multi-clients)
@@ -557,26 +535,6 @@ watch(createAudienceMode, async (mode) => {
     selectedClientsUserIds.value = []
     selectedPrestatairesUserIds.value = []
   }
-})
-
-const searchInput = ref('')
-const debouncedSearch = ref('')
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(searchInput, (v) => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    debouncedSearch.value = v
-    page.value = 0
-  }, 350)
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / pageSize) || 1))
-const pageFirst = computed(() => (notifications.value.length ? page.value * pageSize + 1 : 0))
-const pageLast = computed(() => page.value * pageSize + notifications.value.length)
-
-watch([page, audience, unreadOnly, typeFilter, debouncedSearch], () => {
-  loadNotifications()
 })
 
 onMounted(() => {
@@ -773,31 +731,21 @@ async function loadNotifications() {
   try {
     const response = await fetchAdminApi<unknown>('/admin/notifications', {
       query: {
-        limit: pageSize,
-        offset: page.value * pageSize,
-        audience: audience.value,
-        ...(unreadOnly.value ? { unreadOnly: 'true' } : {}),
-        ...(typeFilter.value.trim() ? { type: typeFilter.value.trim() } : {}),
-        ...(debouncedSearch.value.trim() ? { search: debouncedSearch.value.trim() } : {}),
+        limit: 1000,
+        offset: 0,
+        audience: 'TOUT',
       },
     })
 
     const payload = unwrapApi<AdminNotificationsPayload>(response)
-    listTotal.value = payload?.total ?? 0
     notifications.value = Array.isArray(payload?.items) ? payload.items : []
   } catch (e) {
     console.error(e)
     notifications.value = []
-    listTotal.value = 0
     loadError.value = 'Impossible de charger les notifications.'
   } finally {
     loading.value = false
   }
-}
-
-function goPage(p: number) {
-  if (p < 0 || p > totalPages.value - 1) return
-  page.value = p
 }
 
 function formatInt(value: number) {

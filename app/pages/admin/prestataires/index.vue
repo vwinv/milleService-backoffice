@@ -124,12 +124,12 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 text-slate-700">
-            <tr v-if="!filteredPrestataires.length">
+            <tr v-if="!pageItems.length">
               <td colspan="6" class="px-4 py-6 text-center text-slate-400">
                 Aucun prestataire pour ce filtre.
               </td>
             </tr>
-            <tr v-for="p in filteredPrestataires" :key="p.id">
+            <tr v-for="p in pageItems" :key="p.id">
               <td class="px-4 py-3">
                 <p class="font-semibold text-slate-800">{{ p.nom }}</p>
                 <p class="text-xs text-amber-500">
@@ -198,6 +198,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -470,6 +477,19 @@ const filteredPrestataires = computed(() => {
     list = list.filter((p) => (p.serviceIds ?? []).some((sid) => set.has(sid)))
   }
   return list
+})
+
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(filteredPrestataires)
+
+watch([activeTab, selectedServiceFilterIds], () => {
+  page.value = 1
 })
 
 async function loadServiceFilterOptions() {

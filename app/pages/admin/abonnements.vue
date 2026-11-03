@@ -23,14 +23,8 @@
         {{ loadError }}
       </div>
 
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div class="mb-4">
         <h2 class="text-xl font-semibold text-slate-800">Abonnements prestataires</h2>
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Rechercher prestataire…"
-          class="h-10 w-full max-w-xs rounded-full border border-slate-200 bg-white px-4 text-sm outline-none focus:border-[#020B51] focus:ring-2 focus:ring-[#020B51]/20"
-        />
       </div>
 
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -75,10 +69,10 @@
             <tr v-if="loading">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
-            <tr v-else-if="!items.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Aucun abonnement.</td>
             </tr>
-            <tr v-for="row in items" :key="row.id">
+            <tr v-for="row in pageItems" :key="row.id">
               <td class="px-4 py-3">
                 <p class="font-medium text-slate-800">{{ row.prestataireNom }}</p>
                 <p class="text-xs text-slate-500">{{ row.prestataireEmail }}</p>
@@ -120,32 +114,13 @@
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <div
-        v-if="total > pageSize"
-        class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600"
-      >
-        <p>{{ total }} résultat(s)</p>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1.5 disabled:opacity-40"
-            :disabled="page === 0 || loading"
-            @click="page--"
-          >
-            Précédent
-          </button>
-          <span class="px-2 py-1.5">Page {{ page + 1 }} / {{ totalPages }}</span>
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1.5 disabled:opacity-40"
-            :disabled="page >= totalPages - 1 || loading"
-            @click="page++"
-          >
-            Suivant
-          </button>
-        </div>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -351,15 +326,34 @@ const statutTabs = [
 
 const items = ref<AbonnementRow[]>([])
 const stats = reactive({ total: 0, actifs: 0, expires: 0 })
-const total = ref(0)
 const loading = ref(true)
 const loadError = ref('')
-const search = ref('')
-const debouncedSearch = ref('')
 const statutFilter = ref<'all' | 'actif' | 'expire'>('all')
-const page = ref(0)
-const pageSize = 25
 const actionId = ref<string | null>(null)
+
+const filteredByStatut = computed(() => {
+  const list = items.value
+  if (statutFilter.value === 'actif') {
+    return list.filter((r) => r.statutAffichage === 'ACTIF')
+  }
+  if (statutFilter.value === 'expire') {
+    return list.filter((r) => r.statutAffichage === 'EXPIRE')
+  }
+  return list
+})
+
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(filteredByStatut)
+
+watch(statutFilter, () => {
+  page.value = 1
+})
 
 /** Jours avant la fin : afficher « Expire dans… » et le bouton de renouvellement. */
 const EXPIRING_SOON_DAYS = 7
@@ -405,21 +399,6 @@ const confirmLabel = computed(() => {
   if (paymentMethod.value === 'cash') return 'Enregistrer le paiement'
   return 'Lancer le paiement'
 })
-
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-watch(search, (v) => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    debouncedSearch.value = v.trim()
-    page.value = 0
-  }, 350)
-})
-
-watch([statutFilter, debouncedSearch, page], () => {
-  loadAbonnements()
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
 
 const filteredCreatePrestataires = computed(() => {
   const q = createPrestataireSearch.value.trim().toLowerCase()
@@ -473,18 +452,16 @@ async function loadAbonnements() {
   try {
     const response = await fetchAdminApi<unknown>('/admin/abonnements', {
       query: {
-        statut: statutFilter.value,
-        limit: pageSize,
-        offset: page.value * pageSize,
-        ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
+        statut: 'all',
+        limit: 1000,
+        offset: 0,
       },
     })
     const payload = unwrapList<AbonnementRow>(response)
     items.value = Array.isArray(payload.items) ? payload.items : []
-    stats.total = payload.stats?.total ?? 0
-    stats.actifs = payload.stats?.actifs ?? 0
-    stats.expires = payload.stats?.expires ?? 0
-    total.value = payload.total ?? items.value.length
+    stats.total = payload.stats?.total ?? items.value.length
+    stats.actifs = payload.stats?.actifs ?? items.value.filter((r) => r.statutAffichage === 'ACTIF').length
+    stats.expires = payload.stats?.expires ?? items.value.filter((r) => r.statutAffichage === 'EXPIRE').length
   } catch (e) {
     items.value = []
     loadError.value = extractApiMessage(e, 'Impossible de charger les abonnements.')

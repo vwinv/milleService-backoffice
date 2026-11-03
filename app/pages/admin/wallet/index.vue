@@ -168,12 +168,12 @@
             <tr v-if="txLoading">
               <td colspan="5" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
-            <tr v-else-if="!filteredTransactions.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="5" class="px-4 py-8 text-center text-slate-400">
                 {{ txTab === 'prestataire' ? 'Aucun retrait confirmé.' : 'Aucune transaction.' }}
               </td>
             </tr>
-            <tr v-for="tx in filteredTransactions" :key="tx.id">
+            <tr v-for="tx in pageItems" :key="tx.id">
               <td class="whitespace-nowrap px-4 py-3">{{ formatDate(tx.date) }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ entiteLabel(tx) }}</td>
               <td class="px-4 py-3">{{ tx.montant == null ? '—' : formatFcfa(tx.montant) }}</td>
@@ -184,6 +184,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -433,6 +440,19 @@ const filteredTransactions = computed(() => {
   )
 })
 
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(filteredTransactions)
+
+watch(txTab, () => {
+  page.value = 1
+})
+
 onMounted(async () => {
   await Promise.all([loadSummary(), loadTransactions()])
 })
@@ -456,7 +476,7 @@ async function loadSummary() {
 async function loadTransactions() {
   txLoading.value = true
   try {
-    const response = await fetchAdminApi<unknown>('/admin/transactions', { query: { limit: 50 } })
+    const response = await fetchAdminApi<unknown>('/admin/transactions', { query: { limit: 1000 } })
     const raw = unwrapApi<AdminTransaction[]>(response)
     transactions.value = Array.isArray(raw) ? raw : []
   } catch (e) {

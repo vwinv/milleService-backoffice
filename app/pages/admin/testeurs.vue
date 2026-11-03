@@ -13,61 +13,14 @@
           Total testeurs
         </p>
         <p class="mt-2 text-3xl font-semibold tabular-nums text-[#020B51]">
-          {{ formatInt(listTotal) }}
+          {{ formatInt(items.length) }}
         </p>
       </article>
     </section>
 
     <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="mb-4">
         <h2 class="text-lg font-semibold text-slate-800">Liste des testeurs</h2>
-        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <label class="relative block w-full min-w-[220px] max-w-md">
-            <span class="sr-only">Rechercher</span>
-            <input
-              v-model="searchInput"
-              type="search"
-              placeholder="Rechercher par nom, email, téléphone…"
-              class="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 pl-10 text-sm text-slate-800 outline-none focus:border-[#020B51]/30"
-            />
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path stroke-linecap="round" d="m20 20-3.5-3.5" />
-              </svg>
-            </span>
-          </label>
-          <div class="flex flex-wrap items-center justify-end gap-2">
-            <span class="text-sm text-slate-600">
-              <template v-if="listTotal > 0">
-                {{ pageFirst }}-{{ pageLast }} sur {{ formatInt(listTotal) }}
-              </template>
-              <template v-else>Aucun résultat</template>
-            </span>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-              :disabled="page <= 0 || loading"
-              aria-label="Page précédente"
-              @click="goPage(page - 1)"
-            >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-              :disabled="page >= totalPages - 1 || loading"
-              aria-label="Page suivante"
-              @click="goPage(page + 1)"
-            >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
       </div>
 
       <div
@@ -94,12 +47,12 @@
                 Chargement…
               </td>
             </tr>
-            <tr v-else-if="!items.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="5" class="px-4 py-8 text-center text-slate-400">
                 Aucun testeur inscrit pour le moment.
               </td>
             </tr>
-            <tr v-for="row in items" :key="row.id">
+            <tr v-for="row in pageItems" :key="row.id">
               <td class="px-3 py-3 whitespace-nowrap sm:px-4">{{ formatDate(row.createdAt) }}</td>
               <td class="px-3 py-3 sm:px-4">{{ row.prenom }}</td>
               <td class="px-3 py-3 sm:px-4">{{ row.nom }}</td>
@@ -124,6 +77,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
   </div>
@@ -142,27 +102,18 @@ type TesteurItem = {
   updatedAt: string
 }
 
-const PAGE_SIZE = 20
-
 const items = ref<TesteurItem[]>([])
-const listTotal = ref(0)
-const page = ref(0)
 const loading = ref(false)
 const loadError = ref<string | null>(null)
-const searchInput = ref('')
-let searchDebounce: ReturnType<typeof setTimeout> | null = null
 
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE)),
-)
-
-const pageFirst = computed(() =>
-  listTotal.value === 0 ? 0 : page.value * PAGE_SIZE + 1,
-)
-
-const pageLast = computed(() =>
-  Math.min(listTotal.value, (page.value + 1) * PAGE_SIZE),
-)
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(items)
 
 function formatInt(value: number) {
   return new Intl.NumberFormat('fr-FR').format(value ?? 0)
@@ -205,16 +156,10 @@ async function load() {
   loading.value = true
   loadError.value = null
   try {
-    const query: Record<string, string | number> = {
-      limit: PAGE_SIZE,
-      offset: page.value * PAGE_SIZE,
-    }
-    const q = searchInput.value.trim()
-    if (q) query.q = q
-
-    const raw = await fetchAdminApi<unknown>('/admin/testeurs', { query })
+    const raw = await fetchAdminApi<unknown>('/admin/testeurs', {
+      query: { limit: 1000, offset: 0 },
+    })
     const res = unwrapTesteursResponse(raw)
-    listTotal.value = res.total
     items.value = res.items ?? []
   } catch (e: unknown) {
     const msg =
@@ -228,31 +173,8 @@ async function load() {
   }
 }
 
-function goPage(p: number) {
-  page.value = Math.max(0, Math.min(p, totalPages.value - 1))
-}
-
-watch(page, () => {
-  void load()
-})
-
-watch(searchInput, () => {
-  if (searchDebounce) clearTimeout(searchDebounce)
-  searchDebounce = setTimeout(() => {
-    if (page.value !== 0) {
-      page.value = 0
-    } else {
-      void load()
-    }
-  }, 350)
-})
-
 onMounted(() => {
   void load()
-})
-
-onUnmounted(() => {
-  if (searchDebounce) clearTimeout(searchDebounce)
 })
 
 useHead({

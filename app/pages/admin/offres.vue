@@ -47,10 +47,10 @@
             <tr v-if="loading">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Chargement…</td>
             </tr>
-            <tr v-else-if="!items.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Aucune offre.</td>
             </tr>
-            <tr v-for="row in items" :key="row.id">
+            <tr v-for="row in pageItems" :key="row.id">
               <td class="px-4 py-3">{{ row.code }}</td>
               <td class="px-4 py-3 font-medium text-slate-800">{{ row.libelle }}</td>
               <td class="px-4 py-3">{{ formatMoney(row.prix) }}</td>
@@ -86,6 +86,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -178,6 +185,15 @@ const stats = computed(() => ({
   actifs: items.value.filter((o) => o.actif).length,
   inactifs: items.value.filter((o) => !o.actif).length,
 }))
+
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(items)
 
 function normalizeNumericInput(raw: string): string {
   return raw.trim().replace(/\u00a0/g, '').replace(/\u202f/g, '').replace(/\s/g, '')

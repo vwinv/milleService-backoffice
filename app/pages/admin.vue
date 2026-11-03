@@ -286,8 +286,9 @@
               </div>
               <label class="relative block min-w-[220px] flex-1 max-w-xl">
                 <input
+                  v-model="listSearch"
                   type="search"
-                  placeholder="Search"
+                  placeholder="Rechercher dans la liste…"
                   class="h-11 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none placeholder:text-slate-400 focus:border-[#020B51]/30"
                 />
                 <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -355,6 +356,13 @@ import { clearAdminSession, hydrateAdminSessionFromStorage } from '~/composables
 
 const route = useRoute()
 const router = useRouter()
+const { search: listSearch, clearSearch: clearListSearch } = useAdminListSearch()
+watch(
+  () => route.path,
+  () => {
+    clearListSearch()
+  },
+)
 const inWalletSection = computed(() => route.path.startsWith('/admin/wallet'))
 const isWalletHome = computed(
   () => route.path === '/admin/wallet' || route.path === '/admin/wallet/',

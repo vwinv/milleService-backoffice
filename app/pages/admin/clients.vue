@@ -48,22 +48,6 @@
     <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 class="text-xl font-semibold text-slate-800 sm:text-2xl">Clients</h2>
-        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-        <label class="relative block w-full min-w-[220px] max-w-md">
-          <span class="sr-only">Rechercher</span>
-          <input
-            v-model="searchInput"
-            type="search"
-            placeholder="Rechercher par nom ou e-mail…"
-            class="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 pl-10 text-sm text-slate-800 outline-none focus:border-[#020B51]/30"
-          />
-          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path stroke-linecap="round" d="m20 20-3.5-3.5" />
-            </svg>
-          </span>
-        </label>
         <button
           type="button"
           class="rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100 disabled:opacity-40"
@@ -72,33 +56,6 @@
         >
           Créer une notification générale
         </button>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <span class="text-sm text-slate-600">
-            <template v-if="listTotal > 0">
-              {{ pageFirst }}-{{ pageLast }} sur {{ formatInt(listTotal) }}
-            </template>
-            <template v-else>Aucun résultat</template>
-          </span>
-          <button
-            type="button"
-            class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            :disabled="page <= 0 || loading"
-            aria-label="Page précédente"
-            @click="goPage(page - 1)"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            :disabled="page >= totalPages - 1 || loading"
-            aria-label="Page suivante"
-            @click="goPage(page + 1)"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </div>
-        </div>
       </div>
 
       <div
@@ -124,10 +81,10 @@
             <tr v-if="loading">
               <td colspan="6" class="px-4 py-8 text-center text-slate-500">Chargement…</td>
             </tr>
-            <tr v-else-if="!clients.length">
+            <tr v-else-if="!pageItems.length">
               <td colspan="6" class="px-4 py-8 text-center text-slate-400">Aucun client pour cette recherche.</td>
             </tr>
-            <tr v-for="c in clients" :key="c.id">
+            <tr v-for="c in pageItems" :key="c.id">
               <td class="px-3 py-3 sm:px-4">
                 <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-xs font-bold text-slate-600">
                   <img
@@ -187,6 +144,13 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
 
@@ -558,9 +522,6 @@ const stats = reactive({
   inactifs: 0,
 })
 const clients = ref<ClientRow[]>([])
-const listTotal = ref(0)
-const page = ref(0)
-const pageSize = 10
 const loading = ref(false)
 const loadError = ref('')
 const deletingId = ref<string | null>(null)
@@ -572,21 +533,14 @@ function markAvatarFailed(id: string) {
   avatarLoadFailed.value = next
 }
 
-const searchInput = ref('')
-const debouncedSearch = ref('')
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(searchInput, (v) => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    debouncedSearch.value = v
-    page.value = 0
-  }, 350)
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / pageSize) || 1))
-const pageFirst = computed(() => (clients.value.length ? page.value * pageSize + 1 : 0))
-const pageLast = computed(() => page.value * pageSize + clients.value.length)
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(clients)
 
 type ClientsListPayload = {
   stats?: { total: number; actifs: number; inactifs: number }
@@ -620,12 +574,10 @@ async function loadClients() {
   loading.value = true
   loadError.value = ''
   try {
-    const q = debouncedSearch.value.trim()
     const response = await fetchAdminApi<unknown>('/admin/clients', {
       query: {
-        limit: pageSize,
-        offset: page.value * pageSize,
-        ...(q ? { search: q } : {}),
+        limit: 1000,
+        offset: 0,
       },
     })
     const payload = unwrapClientsListResponse(response)
@@ -635,7 +587,6 @@ async function loadClients() {
       stats.actifs = s.actifs ?? 0
       stats.inactifs = s.inactifs ?? 0
     }
-    listTotal.value = payload?.total ?? 0
     avatarLoadFailed.value = new Set()
     clients.value = (payload?.items ?? []).map((row) => {
       const actif = Boolean(row.actif)
@@ -655,15 +606,6 @@ async function loadClients() {
     loading.value = false
   }
 }
-
-function goPage(p: number) {
-  if (p < 0 || p > totalPages.value - 1) return
-  page.value = p
-}
-
-watch([page, debouncedSearch], () => {
-  loadClients()
-})
 
 onMounted(() => {
   loadClients()

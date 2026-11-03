@@ -30,55 +30,22 @@
     <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
       <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 class="text-lg font-semibold text-slate-800">Liste des prestations</h2>
-        <div class="flex flex-wrap items-center gap-3">
-          <label class="flex items-center gap-2 text-sm text-slate-600">
-            <span>Filtrer par statut</span>
-            <select
-              v-model="statutFilter"
-              class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
-              @change="onStatutFilterChange"
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+          <span>Filtrer par statut</span>
+          <select
+            v-model="statutFilter"
+            class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#020B51]/40"
+          >
+            <option value="">Tous</option>
+            <option
+              v-for="opt in statutOptions"
+              :key="opt.value"
+              :value="opt.value"
             >
-              <option value="">Tous</option>
-              <option
-                v-for="opt in statutOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </label>
-          <span class="text-sm text-slate-600">
-            <template v-if="listTotal > 0">
-              {{ pageFirst }}-{{ pageLast }} sur {{ formatInt(listTotal) }}
-            </template>
-            <template v-else>Aucun résultat</template>
-          </span>
-          <div class="flex gap-1">
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-              :disabled="page <= 0 || loading"
-              aria-label="Page précédente"
-              @click="goPage(page - 1)"
-            >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-              :disabled="page >= totalPages - 1 || loading"
-              aria-label="Page suivante"
-              @click="goPage(page + 1)"
-            >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
+              {{ opt.label }}
+            </option>
+          </select>
+        </label>
       </div>
 
       <div
@@ -107,13 +74,13 @@
                 Chargement…
               </td>
             </tr>
-            <tr v-else-if="!items.length" class="bg-white">
+            <tr v-else-if="!pageItems.length" class="bg-white">
               <td colspan="7" class="px-4 py-8 text-center text-slate-500">
                 Aucune prestation pour ce filtre.
               </td>
             </tr>
             <tr
-              v-for="row in items"
+              v-for="row in pageItems"
               v-else
               :key="row.id"
               class="bg-white hover:bg-slate-50/80"
@@ -153,14 +120,19 @@
             </tr>
           </tbody>
         </table>
+        <AdminListPagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="listTotal"
+          :page-size="pageSize"
+          @update:page="goToPage"
+        />
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-
 definePageMeta({
   layout: false,
 })
@@ -169,7 +141,6 @@ useHead({ title: 'Demande Mille Services' })
 
 const { fetchAdminApi } = useAdminFetch()
 
-const PAGE_SIZE = 20
 
 interface DemandeStats {
   total: number
@@ -208,11 +179,28 @@ const emptyStats = (): DemandeStats => ({
 const stats = ref<DemandeStats>(emptyStats())
 
 const items = ref<DemandeItem[]>([])
-const listTotal = ref(0)
-const page = ref(0)
 const loading = ref(true)
 const loadError = ref<string | null>(null)
 const statutFilter = ref('')
+
+const filteredByStatut = computed(() => {
+  const list = items.value
+  if (!statutFilter.value) return list
+  return list.filter((r) => r.statut === statutFilter.value)
+})
+
+const {
+  page,
+  pageSize,
+  pageItems,
+  total: listTotal,
+  totalPages,
+  goToPage,
+} = useAdminListQuery(filteredByStatut)
+
+watch(statutFilter, () => {
+  page.value = 1
+})
 
 const statCards = [
   { key: 'total' as const, label: 'Nombre de prestations', colorClass: 'text-slate-900' },
@@ -234,18 +222,6 @@ const statutOptions = [
   { value: 'REFUSEE', label: 'Refusée' },
   { value: 'ANNULEE', label: 'Annulée' },
 ]
-
-const totalPages = computed(() =>
-  listTotal.value <= 0 ? 1 : Math.ceil(listTotal.value / PAGE_SIZE),
-)
-
-const pageFirst = computed(() =>
-  listTotal.value === 0 ? 0 : page.value * PAGE_SIZE + 1,
-)
-
-const pageLast = computed(() =>
-  Math.min((page.value + 1) * PAGE_SIZE, listTotal.value),
-)
 
 function formatInt(n: number) {
   return new Intl.NumberFormat('fr-FR').format(n)
@@ -323,19 +299,11 @@ async function load() {
   loading.value = true
   loadError.value = null
   try {
-    const query: Record<string, string | number> = {
-      limit: PAGE_SIZE,
-      offset: page.value * PAGE_SIZE,
-    }
-    if (statutFilter.value) {
-      query.statut = statutFilter.value
-    }
     const raw = await fetchAdminApi<unknown>('/admin/demandes-mille-services', {
-      query,
+      query: { limit: 1000, offset: 0 },
     })
     const res = unwrapDemandesResponse(raw)
     stats.value = res.stats
-    listTotal.value = res.total
     items.value = res.items ?? []
   } catch (e: unknown) {
     const msg = e && typeof e === 'object' && 'message' in e ? String((e as Error).message) : 'Erreur de chargement'
@@ -345,23 +313,6 @@ async function load() {
     loading.value = false
   }
 }
-
-function goPage(p: number) {
-  const next = Math.max(0, Math.min(p, totalPages.value - 1))
-  page.value = next
-}
-
-function onStatutFilterChange() {
-  if (page.value !== 0) {
-    page.value = 0
-  } else {
-    void load()
-  }
-}
-
-watch(page, () => {
-  void load()
-})
 
 onMounted(() => {
   void load()
