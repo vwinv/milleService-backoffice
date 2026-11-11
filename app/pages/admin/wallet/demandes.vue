@@ -94,22 +94,23 @@
               </td>
               <td class="px-4 py-3 text-right">
                 <div v-if="row.status === 'EN_ATTENTE'" class="inline-flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    class="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  <AdminActionButton
+                    variant="success"
+                    class="px-4 py-1.5 text-xs"
                     :disabled="actingId === row.id || paymentModalOpen"
                     @click="openPaymentModal(row)"
                   >
                     Accepter
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-full bg-rose-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="actingId === row.id || paymentModalOpen"
+                  </AdminActionButton>
+                  <AdminActionButton
+                    variant="danger"
+                    class="px-4 py-1.5 text-xs"
+                    :loading="actingId === row.id && !paymentModalOpen"
+                    :disabled="paymentModalOpen"
                     @click="rejectRequest(row)"
                   >
-                    Rejeté
-                  </button>
+                    {{ actingId === row.id && !paymentModalOpen ? 'Rejet…' : 'Rejeté' }}
+                  </AdminActionButton>
                 </div>
                 <span v-else class="text-sm text-slate-400">—</span>
               </td>
@@ -224,14 +225,13 @@
           </div>
 
           <div class="mt-8 flex justify-center">
-            <button
-              type="button"
-              class="w-full max-w-xs rounded-full bg-[#020B51] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#020B51]/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-              :disabled="paymentSubmitting"
+            <AdminActionButton
+              class="w-full max-w-xs px-6 py-3 sm:w-auto"
+              :loading="paymentSubmitting"
               @click="submitPaymentModal"
             >
               {{ paymentSubmitting ? 'Traitement…' : 'Valider le versement' }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

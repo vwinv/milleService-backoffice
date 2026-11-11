@@ -304,14 +304,13 @@
             >
               Annuler
             </button>
-            <button
-              type="button"
-              class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="modalSaving || iconUploading || !modalLibelle.trim() || !modalTarif.trim()"
+            <AdminActionButton
+              :loading="modalSaving || iconUploading"
+              :disabled="!modalLibelle.trim() || !modalTarif.trim()"
               @click="submitModal"
             >
-              {{ modalSaving ? 'Enregistrement…' : 'Enregistrer' }}
-            </button>
+              {{ modalSaving ? 'Enregistrement…' : iconUploading ? 'Upload…' : 'Enregistrer' }}
+            </AdminActionButton>
           </div>
         </div>
       </div>

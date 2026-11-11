@@ -374,14 +374,14 @@
             >
               Annuler
             </button>
-            <button
-              type="button"
-              class="w-full max-w-xs rounded-full bg-[#020B51] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#020B51]/90 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="createSubmitting || (createAudienceMode === 'SELECTION' && selectedClientsUserIds.length + selectedPrestatairesUserIds.length === 0)"
+            <AdminActionButton
+              class="w-full max-w-xs px-6 py-3"
+              :loading="createSubmitting"
+              :disabled="createAudienceMode === 'SELECTION' && selectedClientsUserIds.length + selectedPrestatairesUserIds.length === 0"
               @click="submitCreateNotification"
             >
               {{ createSubmitting ? 'Envoi…' : 'Envoyer' }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

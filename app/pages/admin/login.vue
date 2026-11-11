@@ -143,13 +143,13 @@
         </div>
 
         <div class="mt-10 flex w-full justify-center">
-          <button
+          <AdminActionButton
             type="submit"
-            :disabled="isSubmitting"
-            class="inline-flex h-12 w-full max-w-[220px] shrink-0 items-center justify-center rounded-full bg-[#020B51] px-6 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(2,11,81,0.22)] transition hover:bg-[#07146a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#020B51] focus-visible:ring-offset-2 disabled:opacity-70"
+            class="h-12 w-full max-w-[220px] shadow-[0_6px_14px_rgba(2,11,81,0.22)]"
+            :loading="isSubmitting"
           >
-            {{ isSubmitting ? 'Connexion...' : 'Connexion' }}
-          </button>
+            {{ isSubmitting ? 'Connexion…' : 'Connexion' }}
+          </AdminActionButton>
         </div>
         <p
           v-if="errorMessage"

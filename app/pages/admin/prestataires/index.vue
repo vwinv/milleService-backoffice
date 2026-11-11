@@ -289,14 +289,13 @@
             >
               Annuler
             </button>
-            <button
-              type="button"
-              class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
-              :disabled="creating || !canSubmitCreate"
+            <AdminActionButton
+              :loading="creating"
+              :disabled="!canSubmitCreate"
               @click="submitCreate"
             >
               {{ creating ? 'Création…' : 'Créer le prestataire' }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

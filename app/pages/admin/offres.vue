@@ -134,14 +134,12 @@
             <button type="button" class="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100" @click="closeModal">
               Annuler
             </button>
-            <button
-              type="button"
-              class="rounded-full bg-[#020B51] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="saving"
+            <AdminActionButton
+              :loading="saving"
               @click="submitModal"
             >
               {{ saving ? 'Enregistrement…' : editingId ? 'Mettre à jour' : 'Enregistrer' }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

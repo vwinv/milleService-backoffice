@@ -171,14 +171,13 @@
             >
               Annuler
             </button>
-            <button
-              type="button"
-              class="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+            <AdminActionButton
+              variant="danger"
               :disabled="!createPrestataireId"
               @click="confirmCreatePrestataire"
             >
               Continuer
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>
@@ -268,15 +267,15 @@
             >
               {{ paymentInfo || paymentWaiting ? 'Fermer' : 'Annuler' }}
             </button>
-            <button
+            <AdminActionButton
               v-if="!paymentInfo && !paymentWaiting"
-              type="button"
-              class="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-              :disabled="paymentSaving || !canSubmitPayment"
+              variant="danger"
+              :loading="paymentSaving"
+              :disabled="!canSubmitPayment"
               @click="submitPayment"
             >
               {{ paymentSaving ? 'Traitement…' : confirmLabel }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

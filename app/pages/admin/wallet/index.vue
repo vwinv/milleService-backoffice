@@ -276,14 +276,13 @@
           </div>
 
           <div class="mt-8 flex justify-center">
-            <button
-              type="button"
-              class="w-full max-w-xs rounded-full bg-[#020B51] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#020B51]/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-              :disabled="retraitSubmitting"
+            <AdminActionButton
+              class="w-full max-w-xs px-6 py-3 sm:w-auto"
+              :loading="retraitSubmitting"
               @click="submitRetraitModal"
             >
               {{ retraitSubmitting ? 'Traitement…' : 'Enregistrer le retrait' }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>

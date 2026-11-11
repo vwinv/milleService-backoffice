@@ -114,17 +114,14 @@
               </button>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-end">
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                :disabled="deletingPrestataire"
+              <AdminActionButton
+                variant="ghost"
+                class="border border-rose-200 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50"
+                :loading="deletingPrestataire"
                 @click="confirmDeletePrestataire"
               >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
                 {{ deletingPrestataire ? 'Suppression…' : 'Supprimer' }}
-              </button>
+              </AdminActionButton>
               <a
                 v-if="phoneDigits(p.telephone)"
                 :href="telHref(p.telephone!)"
@@ -400,33 +397,34 @@
               <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="statusChipClass(doc.statut)">
                 {{ doc.statut }}
               </span>
-              <button
-                type="button"
-                class="rounded-full border border-emerald-600 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white disabled:opacity-50"
+              <AdminActionButton
+                variant="success"
+                class="border border-emerald-600 bg-transparent px-3 py-1 text-xs text-emerald-700 hover:bg-emerald-600 hover:text-white"
+                :loading="validatingDocumentId === doc.id"
                 :disabled="doc.statut === 'VALIDE' || docActionLoadingId === doc.id"
                 @click="validateDocument(doc.id)"
               >
                 {{ validatingDocumentId === doc.id ? '…' : 'Valider' }}
-              </button>
-              <button
-                type="button"
-                class="rounded-full border border-rose-600 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-600 hover:text-white disabled:opacity-50"
+              </AdminActionButton>
+              <AdminActionButton
+                variant="danger"
+                class="border border-rose-600 bg-transparent px-3 py-1 text-xs text-rose-700 hover:bg-rose-600 hover:text-white"
                 :disabled="doc.statut === 'VALIDE' || docActionLoadingId === doc.id"
                 @click="openRejectDocumentModal(doc)"
               >
                 Rejeter
-              </button>
-              <button
-                type="button"
-                class="rounded-full p-2 text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+              </AdminActionButton>
+              <AdminActionButton
+                variant="ghost"
+                class="p-2 text-rose-600 hover:bg-rose-50"
                 title="Supprimer ce document"
-                :disabled="deletingDocumentId === doc.id"
+                :loading="deletingDocumentId === doc.id"
                 @click="deleteDocument(doc)"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-              </button>
+              </AdminActionButton>
             </div>
           </article>
         </div>
@@ -459,14 +457,13 @@
           >
             Annuler
           </button>
-          <button
-            type="button"
-            class="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-            :disabled="rejectDocumentSubmitting"
+          <AdminActionButton
+            variant="danger"
+            :loading="rejectDocumentSubmitting"
             @click="confirmRejectDocument"
           >
             {{ rejectDocumentSubmitting ? 'Envoi…' : 'Confirmer' }}
-          </button>
+          </AdminActionButton>
         </div>
       </div>
     </div>
@@ -567,14 +564,14 @@
             </span>
           </label>
           <p v-if="plafondModalError" class="mt-3 text-sm text-rose-600">{{ plafondModalError }}</p>
-          <button
-            type="button"
-            class="mt-6 w-full rounded-full bg-[#020B51] py-3 text-sm font-semibold text-white hover:bg-[#020B51]/90 disabled:opacity-50"
-            :disabled="plafondSaving"
+          <AdminActionButton
+            class="mt-6 w-full py-3"
+            block
+            :loading="plafondSaving"
             @click="submitPlafond"
           >
             {{ plafondSaving ? 'Envoi…' : 'Appliquer' }}
-          </button>
+          </AdminActionButton>
           <button
             v-if="p?.walletBalancePlafond != null"
             type="button"
@@ -665,15 +662,15 @@
             >
               {{ abonnementPaymentInfo || abonnementPaymentWaiting ? 'Fermer' : 'Annuler' }}
             </button>
-            <button
+            <AdminActionButton
               v-if="!abonnementPaymentInfo && !abonnementPaymentWaiting"
-              type="button"
-              class="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-              :disabled="abonnementPaymentSaving || !canSubmitAbonnement"
+              variant="danger"
+              :loading="abonnementPaymentSaving"
+              :disabled="!canSubmitAbonnement"
               @click="submitAbonnement"
             >
               {{ abonnementPaymentSaving ? 'Traitement…' : abonnementConfirmLabel }}
-            </button>
+            </AdminActionButton>
           </div>
         </div>
       </div>
